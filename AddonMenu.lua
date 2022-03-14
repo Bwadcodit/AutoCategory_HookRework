@@ -148,7 +148,7 @@ local function checkCurrentRule()
     
     local func, err = zo_loadstring("return("..fieldData.currentRule.rule..")")
     if err then
-		logger.error("FAILED rule compile - "..err)
+		-- logger.error("FAILED rule compile - "..err)
         ruleCheckStatus.err = err
         fieldData.currentRule.damaged = true 
 		fieldData.currentRule.err = err
