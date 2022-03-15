@@ -590,9 +590,8 @@ end
 
 function AutoCategory.onPlayerActivated()
     EVENT_MANAGER:UnregisterForEvent(AutoCategory.name, EVENT_PLAYER_ACTIVATED)
-	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_CLOSE_GUILD_BANK, function () AC.BulkMode = false end)
-	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_CLOSE_BANK, function () AC.BulkMode = false end)
-
+	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_CLOSE_GUILD_BANK, function () AC.ExitBulkMode() end)
+	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_CLOSE_BANK, function () AC.ExitBulkMode() end)
 end
 
 -- register our event handler function to be called to do initialization
@@ -693,10 +692,12 @@ function AutoCategory.RefreshAllLists()
 end
 --]]
 function AC_ItemRowHeader_OnMouseEnter(header)
-    local cateName = header.slot.dataEntry.bestItemTypeName
-    local bagTypeId = header.slot.dataEntry.bagTypeId
+    local cateName = header.slot.dataEntry.data.AC_categoryName -- data structure compatible with reworked Hooks_Keyboard.lua
+    local bagTypeId = header.slot.dataEntry.data.AC_bagTypeId
+    if not cateName then cateName = header.slot.dataEntry.bestItemTypeName end -- aims to keep compatibility with Hooks_Gamepad.lua, NOT tested
+    if not bagTypeId then bagTypeId = header.slot.dataEntry.bagTypeId end
 
-    local collapsed = AutoCategory.IsCategoryCollapsed(bagTypeId, cateName)
+    local collapsed = (cateName ~= nil) and (bagTypeId ~= nil) and AutoCategory.IsCategoryCollapsed(bagTypeId, cateName)
     local markerBG = header:GetNamedChild("CollapseMarkerBG")
 
     if AutoCategory.acctSaved.general["SHOW_CATEGORY_COLLAPSE_ICON"] then
@@ -721,20 +722,24 @@ function AC_ItemRowHeader_OnMouseClicked(header)
         return
     end
 
-    local cateName = header.slot.dataEntry.bestItemTypeName
-    local bagTypeId = header.slot.dataEntry.bagTypeId
+    local cateName = header.slot.dataEntry.data.AC_categoryName -- data structure compatible with reworked Hooks_Keyboard.lua
+    local bagTypeId = header.slot.dataEntry.data.AC_bagTypeId
+    if not cateName then cateName = header.slot.dataEntry.bestItemTypeName end -- aims to keep compatibility with Hooks_Gamepad.lua, NOT tested
+    if not bagTypeId then bagTypeId = header.slot.dataEntry.bagTypeId end
 
-    local collapsed = AutoCategory.IsCategoryCollapsed(bagTypeId, cateName)
+    local collapsed = (cateName ~= nil) and (bagTypeId ~= nil) and AutoCategory.IsCategoryCollapsed(bagTypeId, cateName)
     AutoCategory.SetCategoryCollapsed(bagTypeId, cateName, not collapsed)
     AutoCategory.RefreshCurrentList()
 end
 
 function AC_ItemRowHeader_OnShowContextMenu(header)
     ClearMenu()
-    local cateName = header.slot.dataEntry.bestItemTypeName
-    local bagTypeId = header.slot.dataEntry.bagTypeId
+    local cateName = header.slot.dataEntry.data.AC_categoryName -- data structure compatible with reworked Hooks_Keyboard.lua
+    local bagTypeId = header.slot.dataEntry.data.AC_bagTypeId
+    if not cateName then cateName = header.slot.dataEntry.bestItemTypeName end -- aims to keep compatibility with Hooks_Gamepad.lua, NOT tested
+    if not bagTypeId then bagTypeId = header.slot.dataEntry.bagTypeId end
 
-    local collapsed = AutoCategory.IsCategoryCollapsed(bagTypeId, cateName)
+    local collapsed = (cateName ~= nil) and (bagTypeId ~= nil) and AutoCategory.IsCategoryCollapsed(bagTypeId, cateName)
     if collapsed then
         AddMenuItem(
             L(SI_CONTEXT_MENU_EXPAND),

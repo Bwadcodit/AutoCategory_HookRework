@@ -6,12 +6,26 @@
 -- Because the Guild Bank info is requested from the server every single
 -- time, it is prone to delays in operation to prevent server spamming.
 -- It is hoped that by entering into bulk mode that we do not perform
--- server requests for the guild bank 
+-- server requests for the guild bank
+local bulkMode = false
 function AutoCategory.EnterBulkMode()
-	AutoCategory.BulkMode(false)
+	bulkMode = true
 end
 function AutoCategory.ExitBulkMode()
-	AutoCategory.BulkMode(false)
+	if bulkMode then
+		bulkMode = false
+		AutoCategory.RefreshAllLists()
+	end
+end
+function AutoCategory.IsInBulkMode()
+	return bulkMode
+end
+function AutoCategory.BulkMode(setBulkModeTo)
+	if setBulkModeTo ~= nil and setBulkModeTo == false then
+		AutoCategory.ExitBulkMode()
+	else
+		AutoCategory.EnterBulkMode()
+	end
 end
 
 -- Convert a ZOS bagId into AutoCategory bag_type_id
