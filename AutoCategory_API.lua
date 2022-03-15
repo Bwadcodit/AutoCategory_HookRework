@@ -7,20 +7,26 @@
 -- time, it is prone to delays in operation to prevent server spamming.
 -- It is hoped that by entering into bulk mode that we do not perform
 -- server requests for the guild bank
-local bulkMode = false
+local bulkMode = 0
 function AutoCategory.EnterBulkMode()
-	bulkMode = true
+	bulkMode = 1
+end
+function AutoCategory.EnterHardBulkMode() -- completely stop sorting (inventory list will be empty during hard bulk), way more effective
+	bulkMode = 2
 end
 function AutoCategory.ExitBulkMode()
-	if bulkMode then
-		bulkMode = false
-		AutoCategory.RefreshAllLists()
+	if bulkMode > 0 then
+		bulkMode = 0
+		AutoCategory.RefreshCurrentList()
 	end
 end
 function AutoCategory.IsInBulkMode()
-	return bulkMode
+	return bulkMode > 0
 end
-function AutoCategory.BulkMode(setBulkModeTo)
+function AutoCategory.IsInHardBulkMode()
+	return bulkMode == 2
+end
+function AutoCategory.BulkMode(setBulkModeTo) -- for compatibility?
 	if setBulkModeTo ~= nil and setBulkModeTo == false then
 		AutoCategory.ExitBulkMode()
 	else

@@ -1,3 +1,28 @@
+--[[
+CHANGE DETECTION STRATEGY
+This file use hooks on API functions: PLAYER_INVENTORY:ApplySort, SMITHING.deconstructionPanel.inventory:SortData, and SMITHING.improvementPanel.inventory:SortData to order in categories the item list displayed in all inventories (including crafting station)
+This process involves executing all active rules for each items, and can be trigger multiple times in a row, notably for bank transfers (more than ten calls)
+In order to reduce the impact of the add-on:
+	1 - The results of rules' execution are stored in 'itemEntry.data'.
+ 	As 'itemEntry.data' is persistent, results can be reused directly without having to re-execute all the rules every time.
+		However, 'itemEntry.data' will not persist forever and will be reset at some point, and rules will need to be re-executed, but this is not much of an issue.
+	2 - A change detection strategy is used to re-execute rules when necessary.
+		A global hash is used to trigger re-execution of rules for all items based on: ???
+			- Quickslots: test if quickslots have changed
+		A hash for each item is used to trigger re-execution of rules for a single item based on:
+			- Time: test if the results stored are older than 2 seconds
+			- Base game data: test various variables like isPlayerLocked, brandNew, isInArmory etc.
+			- FCOIS data: test if item's marks have changed
+		Some API events are monitored:
+			- A hook on PLAYER_INVENTORY:OnInventorySlotUpdated triggers re-execution of rules for a single item
+			- A hook on ZO_QuickslotManager:DoQuickSlotUpdate triggers an inventory refresh as the game does not do it when updating quickslots. (This is so changes are displayed directly when a quickslot is updated and the quickslot button is pressed to go back to the inventory, otherwise another action would be required to trigger an inventory refresh)
+			- A callback on LAM-PanelClosed triggers re-execution of rules
+			- The event EVENT_STACKED_ALL_ITEMS_IN_BAG is used so re-execution of rules with inventory refresh can be triggered manually by stacking all items.
+		Also, some other add-ons' functions are hooked to provide better compatibility and responsiveness:
+			- AG:handlePostChangeGearSetItems and AG:LoadProfile trigger rules re-execution and an inventory refresh
+
+]]
+
 
 local LMP = LibMediaProvider
 local SF = LibSFUtils
@@ -17,11 +42,6 @@ local sortKeys = {
 }
 
 local CATEGORY_HEADER = 998
-
--- global variables used by sort hooks for change detection
-AutoCategory.hookUpdateHash = nil -- a hash representing the last 'state', so changes can be detected. Use bag, filter and sorting infos.
-AutoCategory.uniqueIdsToUpdate = {} -- uniqueIds of items that have been updated (need rule re-execution)
-AutoCategory.lastNewScrollDataSize = 0
 
 -- convenience function
 -- given a (supposed) table variable
@@ -159,38 +179,100 @@ local function createHeaderEntry(itemEntry, reuseCount)
 	return headerEntry
 end
 
--- execute rules and store result in entry.data, if needed. Return false if no entry was updated, true otherwise.
-local function handleRules(scrollData, newHash, isAtCraftStation)
-	local hasUpdated = false -- indicate if at least one item has been updated with new rule results
-	local reloadAll = isAtCraftStation -- at craft stations scrollData seems to be reseted every time, so need to always reload
-	if newHash ~= AutoCategory.hookUpdateHash then -- test if changes detected
-		--d("[AUTO-CAT] reloading all: "..tostring(AutoCategory.hookUpdateHash).." -> "..tostring(newHash))
-		AutoCategory.hookUpdateHash = newHash -- reset hash for next hook
-		reloadAll = true
+-- global variables used by sort hooks for change detection
+local hashGlobal = "InitialHash" -- a hash representing the last 'state', so changes can be detected. Use bag, filter and sorting infos.
+local function forceRuleReloadGlobal(reloadTypeString)
+	hashGlobal = "forceRuleReloadGlobal-" .. tostring(reloadTypeString)
+end
+
+local function detectGlobalChanges()
+	--local scene = "" -- Retrieve current scene
+	--if SCENE_MANAGER and SCENE_MANAGER:GetCurrentScene() then
+	--	scene = SCENE_MANAGER:GetCurrentScene():GetName()
+	--end
+	local quickSlotHash = "" -- retrieve quickslots uniqueIDs
+	for i = ACTION_BAR_FIRST_UTILITY_BAR_SLOT + 1, ACTION_BAR_FIRST_UTILITY_BAR_SLOT + ACTION_BAR_EMOTE_QUICK_SLOT_SIZE do
+		quickSlotHash = quickSlotHash .. ":" .. tostring(GetSlotItemLink(i))
 	end
-	for _, entry in ipairs(scrollData) do
-		if entry.typeId ~= CATEGORY_HEADER then -- headers are not matched with rules
-			local newEntryHash = buildHashString(entry.data.isPlayerLocked, entry.data.isGemmable, entry.data.stolen, entry.data.isBoPTradeable, entry.data.isInArmory, entry.data.brandNew, entry.data.bagId, entry.data.statusSortOrder, entry.data.stackCount)
-			if reloadAll or (entry.data.AC_categoryName == nil) or (newEntryHash ~= entry.data.AC_hash) then -- reload rules if full reload triggered, hash has changed, or item has nothing loaded
-				entry.data.AC_hash = newEntryHash
-				hasUpdated = true
-				loadRulesResult(entry, isAtCraftStation)
-			else
-				for _, uniqueId in ipairs(AutoCategory.uniqueIdsToUpdate) do -- look for items with changes detected
-					if entry.data.uniqueId == uniqueId then
-						--d("[AUTO-CAT] reloading: "..tostring(entry.data.name))
-						hasUpdated = true
-						loadRulesResult(entry, isAtCraftStation)
-					end -- does not break in case there is several slots with same uniqueId
-				end
+	local newHash = buildHashString(--[[scene, ]]quickSlotHash) -- use hash for change detection
+	if newHash ~= hashGlobal then -- test if changes detected
+		--d("[AUTO-CAT] global hash change: "..tostring(hashGlobal).." -> "..tostring(newHash))
+		hashGlobal = newHash -- reset hash for next hook
+		return true
+	end
+	return false
+end
+
+local forceRuleReloadByUniqueIDs = {} -- uniqueIDs of items that have been updated (need rule re-execution), based on PLAYER_INVENTORY:OnInventorySlotUpdated hook
+local function forceRuleReloadForSlot(bagId, slotIndex)
+	table.insert(forceRuleReloadByUniqueIDs, GetItemUniqueId(bagId, slotIndex))
+end
+
+local function detectItemChanges(itemEntry)
+	--- Hash construction
+	local hashFCOIS = "" -- retrieve FCOIS mark data for change detection with itemEntry hash
+	if FCOIS and itemEntry.data.bagId and itemEntry.data.bagId > 0 and itemEntry.data.slotIndex and itemEntry.data.slotIndex > 0 then
+		local _, markedIconsArray = FCOIS.IsMarked(itemEntry.data.bagId, itemEntry.data.slotIndex, -1)
+		if markedIconsArray then
+			for _, value in ipairs(markedIconsArray) do
+				hashFCOIS = hashFCOIS .. tostring(value)
 			end
 		end
 	end
-	AutoCategory.uniqueIdsToUpdate = {} -- reset update buffer
-	return hasUpdated
+	local newEntryHash = buildHashString(itemEntry.data.isPlayerLocked, itemEntry.data.isGemmable, itemEntry.data.stolen, itemEntry.data.isBoPTradeable, itemEntry.data.isInArmory, itemEntry.data.brandNew, itemEntry.data.bagId, itemEntry.data.stackCount, itemEntry.data.uniqueId, itemEntry.data.slotIndex, itemEntry.data.meetsUsageRequirement, itemEntry.data.locked, itemEntry.data.isJunk, hashFCOIS)
+
+	--- Test hash change
+	local changeDetected = false
+	if itemEntry.data.AC_hash == nil or itemEntry.data.AC_hash ~= newEntryHash then
+		if itemEntry.data.AC_hash ~= nil then
+			--d("[AUTO-CAT] item hash change: "..tostring(itemEntry.data.AC_hash).." -> "..tostring(newEntryHash))
+			--d("[AUTO-CAT] item hash change: "..GetItemLink(itemEntry.data.bagId, itemEntry.data.slotIndex))
+		end
+		itemEntry.data.AC_hash = newEntryHash
+		changeDetected = true
+	end
+
+	--- Test last update time, triggers update if more than 2s
+	local currentTime = os.clock()
+	if not changeDetected and itemEntry.data.AC_lastUpdateTime ~= nil then
+		if currentTime - tonumber(itemEntry.data.AC_lastUpdateTime) > 2 then
+			changeDetected = true
+		end
+	end
+
+	--- Test if uniqueID tagged for update
+	if not changeDetected then
+		for _, uniqueID in ipairs(forceRuleReloadByUniqueIDs) do -- look for items with changes detected
+			if itemEntry.data.uniqueID == uniqueID then
+				--d("[AUTO-CAT] item uniqueID update: "..GetItemLink(itemEntry.data.bagId, itemEntry.data.slotIndex))
+				changeDetected = true
+			end
+		end
+	end
+
+	if changeDetected then itemEntry.data.AC_lastUpdateTime = currentTime end
+	return changeDetected
 end
 
--- Create new category or update existing. Return created category, or nil.
+--- Execute rules and store result in itemEntry.data, if needed. Return true if scrollData should be processed (no headers was found or at least one itemEntry was updated), false otherwise.
+local function handleRules(scrollData, isAtCraftStation)
+	local updateCount = 0 -- indicate if at least one item has been updated with new rule results
+	local reloadAll = isAtCraftStation or detectGlobalChanges() -- at craft stations scrollData seems to be reset every time, so need to always reload
+	for _, itemEntry in ipairs(scrollData) do
+		if itemEntry.typeId ~= CATEGORY_HEADER then -- headers are not matched with rules
+			-- 'detectItemChanges(itemEntry) or reloadAll' need to be in this order so hash is always computed and stored
+			if detectItemChanges(itemEntry) or reloadAll then -- reload rules if full reload triggered, or changes detected
+				--d("[AUTO-CAT] reloading one: "..tostring(itemEntry.data.AC_hash).." -> "..tostring(newEntryHash))
+				updateCount = updateCount + 1
+				loadRulesResult(itemEntry, isAtCraftStation)
+			end
+		end
+	end
+	forceRuleReloadByUniqueIDs = {} -- reset update buffer
+	return updateCount
+end
+
+--- Create new category or update existing. Return created category, or nil.
 local function handleCategory(category_list, itemEntry)
 	local categoryName = itemEntry.data.AC_categoryName
 	if category_list[categoryName] == nil then -- first time seeing this category name -> create new header
@@ -198,7 +280,7 @@ local function handleCategory(category_list, itemEntry)
 			if AutoCategory.IsCategoryCollapsed(itemEntry.data.AC_bagTypeId, categoryName) then -- the category is collapsed -> matching items are not contained in scrollData input -> reuse previous count
 				category_list[categoryName] = createHeaderEntry(itemEntry, true)
 				return category_list[categoryName]
-			else --> category not collapsed, do not create header here, will recount items and recreate
+			else --> category not collapsed, do not create header here, will recreate and recount items
 				return nil
 			end
 		elseif itemEntry.data.AC_matched or not isUngroupedHidden(itemEntry.data.AC_bagTypeId) then --> regular item, not ungrouped and hidden
@@ -211,66 +293,33 @@ local function handleCategory(category_list, itemEntry)
 	return nil
 end
 
-local function createNewScrollData(scrollData)
+local function createNewScrollData(scrollData, inventoryType)
 	local category_list = {} -- keep track of categories added and their item count
 	local newScrollData = {} -- output, entries sorted with category headers
-	for _, entry in ipairs(scrollData) do -- create newScrollData with headers and only non hidden items
-		if entry.typeId ~= CATEGORY_HEADER then
-			if not isHiddenEntry(entry) then table.insert(newScrollData, entry) end -- add entry if visible
+	for _, itemEntry in ipairs(scrollData) do -- create newScrollData with headers and only non hidden items
+		if itemEntry.typeId ~= CATEGORY_HEADER then
+			if not isHiddenEntry(itemEntry) then table.insert(newScrollData, itemEntry) end -- add itemEntry if visible
 		end
-		table.insert(newScrollData, handleCategory(category_list, entry)) -- add header or update header count
+		local category = handleCategory(category_list, itemEntry)
+		if category ~= nil then
+			table.insert(newScrollData, category) -- add header or update header count
+		end
 	end
-	AutoCategory.lastNewScrollDataSize = #newScrollData
 	return newScrollData
 end
 
 local function prehookSort(self, inventoryType) 
 	--d("[AUTO-CAT] -> prehookSort ("..inventoryType.." - "..tostring(AutoCategory.Enabled)..") <-- START")
-	if not AutoCategory.Enabled then return false end -- reverse to default behavior if disabled: default ApplySort() function is used
-	if PersonalAssistant and PersonalAssistant.Banking and PersonalAssistant.Banking.isBankItemTransferBlocked then -- PABanking is transfering -> exit and prevent running ApplySort()
-		AutoCategory.hookUpdateHash = "PAB-refresh" -- change hash to trigger refresh
-		return true 
-	end
-	-- from nogetrandom
-	if SCENE_MANAGER and SCENE_MANAGER:GetCurrentScene() then
-		if AutoCategory.BulkMode and AutoCategory.BulkMode == true then
-			local scene = SCENE_MANAGER:GetCurrentScene():GetName()
-			if scene == "guildBank" or (XLGearBanker and scene == "bank") then
-				return false	-- skip out early
-			end
-		end
-	end
-	-- end nogetrandom recommend
-	--[[
-    if SCENE_MANAGER and SCENE_MANAGER:GetCurrentScene() then
-        if AutoCategory.BulkMode and AutoCategory.BulkMode == true and SCENE_MANAGER:GetCurrentScene():GetName() == "guildBank" then
-            return false	-- skip out early
-        end
-    end
-	--]]
-	if inventoryType == INVENTORY_QUEST_ITEM then return false end  -- reverse to default behavior if quest item tab opened
+
+	--- Stop conditions: AC is disabled or quest items are displayed
+	local stop = (not AutoCategory.Enabled) or (inventoryType == INVENTORY_QUEST_ITEM)
+	if stop then return false end -- reverse to default behavior: default ApplySort() function is used
 
 	local inventory = self.inventories[inventoryType]
 	if inventory == nil then
 		-- Use normal inventory by default (instead of the quest item inventory for example)
 		inventory = self.inventories[self.selectedTabType]
 	end
-
-	local scrollData = ZO_ScrollList_GetDataList(inventory.listView)
-	if #scrollData == 0 then return false end -- empty inventory -> revert to default behavior
-
-	local scrollDataHasChanged = (#scrollData ~= AutoCategory.lastNewScrollDataSize) -- scroll data is new if size changed
-	if not scrollDataHasChanged then
-		local headerFound = false
-		for _, entry in ipairs(scrollData) do
-			if entry.typeId == CATEGORY_HEADER then
-				headerFound = true -- a header existing here means the scroll data is untouched since last sort
-				break
-			end
-		end
-		scrollDataHasChanged = not headerFound -- scroll data is new if it contains no header
-	end
-
 	inventory.sortFn =  function(left, right) -- set new inventory sort function
 		if AutoCategory.Enabled then
 			if right.data.AC_sortPriorityName ~= left.data.AC_sortPriorityName then
@@ -281,7 +330,7 @@ local function prehookSort(self, inventoryType)
 			end
 		end
 		--compatible with quality sort
-		if type(inventory.currentSortKey) == "function" then 
+		if type(inventory.currentSortKey) == "function" then
 			if inventory.currentSortOrder == ZO_SORT_ORDER_UP then
 				return inventory.currentSortKey(left.data, right.data)
 			else
@@ -291,13 +340,36 @@ local function prehookSort(self, inventoryType)
 		return ZO_TableOrderingFunction(left.data, right.data, inventory.currentSortKey, sortKeys, inventory.currentSortOrder)
 	end
 
-	-- build a hash with bag, filter and sort identifiers, so it detects any changes and triggers a full rule rerun. 
-	local newHash = buildHashString(inventoryType, inventory.currentFilter, inventory.currentSortKey, inventory.currentSortOrder, self.selectedTabType)
-	local hasUpdated = handleRules(scrollData, newHash, false)
-	if hasUpdated or scrollDataHasChanged then -- changes detected --> rebuild scroll data with headers
-		inventory.listView.data = createNewScrollData(scrollData)
+	local scene = "" -- Retrieve current scene
+	if SCENE_MANAGER and SCENE_MANAGER:GetCurrentScene() then
+		scene = SCENE_MANAGER:GetCurrentScene():GetName()
 	end
-	--d("[AUTO-CAT] END ("..tostring(scrollDataHasChanged)..", "..tostring(hasUpdated)..") - "..tostring(#scrollData).." -> "..tostring(AutoCategory.lastNewScrollDataSize))
+
+	--- Bulk mode (when bank is open): hold all sorting for a time, full refresh when it's over (triggered by AutoCategory.ExitBulkMode()).
+	if AutoCategory.IsInBulkMode() and (scene == "guildBank" or scene == "bank") then -- No bulk mode if not in bank
+		--d("[AUTO-CAT] -> prehookSort - bulk mode")
+		forceRuleReloadGlobal("BulkMode") -- trigger rules reload when exiting bulk mode
+		return AutoCategory.IsInHardBulkMode() --- also skip default behavior if hard mode
+	end
+	local scrollData = ZO_ScrollList_GetDataList(inventory.listView)
+	if #scrollData == 0 then return false end -- empty inventory -> skip rules execution / category handling
+
+	--- a header existing means the scrollData is untouched since last sort
+	local noHeaderFound = true
+	for _, itemEntry in ipairs(scrollData) do
+		if itemEntry.typeId == CATEGORY_HEADER then
+			noHeaderFound = false
+			break
+		end
+	end
+
+	local updateCount = handleRules(scrollData, false)
+	if noHeaderFound or updateCount > 0 then
+		--- scrollData is reset or item(s) updated --> rebuild scrollData with headers
+		inventory.listView.data = createNewScrollData(scrollData, inventoryType)
+	end
+	--d("[AUTO-CAT] END - "..inventoryType.." ("..tostring(noHeaderFound)..", "..tostring(updateCount)..")")
+	return false -- continue with default behavior: default ApplySort() function is used with custom inventory sort function
 end
 
 local function prehookCraftSort(self)
@@ -335,36 +407,42 @@ local function prehookCraftSort(self)
 	self.list.data = newScrollData  
 end
 
--- force re-execution of rules
-local function forceInventoryRefresh()
-	AutoCategory.hookUpdateHash = "force_refresh" -- trigger rules execution on next sort hook
-	PLAYER_INVENTORY:UpdateList(INVENTORY_BACKPACK, true)-- trigger sort for backpack as opening/closing it does not trigger sort
+local function refresh(refreshList, forceRuleReload, reloadTypeString)
+	--d("[AUTO-CAT] -> refresh called: " .. tostring(reloadTypeString))
+	if forceRuleReload then
+		forceRuleReloadGlobal(reloadTypeString)
+	end
+	if refreshList then
+		AutoCategory.RefreshCurrentList(false)
+	end
 end
 
-local function forceInventoryBankRefresh()
-	AutoCategory.hookUpdateHash = "force_refresh_bank" -- trigger rules execution on next sort hook
-	PLAYER_INVENTORY:UpdateList(INVENTORY_BACKPACK, true)-- trigger sort for backpack as opening/closing it does not trigger sort
-	PLAYER_INVENTORY:UpdateList(INVENTORY_BANK, true) 
+local function getRefreshFunc(refreshList, forceRuleReload, reloadTypeString)
+	return function() refresh(refreshList, forceRuleReload, reloadTypeString) end
 end
 
-local function preHookOnInventorySlotUpdated(self, bagId, slotIndex)
-	table.insert(AutoCategory.uniqueIdsToUpdate, GetItemUniqueId(bagId, slotIndex))
-end
-
-local function preHookDoQuickSlotUpdate(self, physicalSlot, animationOption)
+local function onDoQuickSlotUpdate(self, physicalSlot, animationOption)
 	if animationOption then -- a quickslot has been changed (manually)
-		forceInventoryRefresh()
+		refresh(true, false, "QuickSlot_update")
 	end
 end
 
-local function preHookLAMPanelClosed(currentPanel)
-	if currentPanel and currentPanel.data.name == AutoCategory.settingName then -- closed panel is AC panel
-		forceInventoryRefresh()
-	end
+--local function onLAMPanelClosed(currentPanel)
+--	if currentPanel and currentPanel.data.name == AutoCategory.settingName then -- closed panel is AC panel
+--	end
+--end
+--local function onAGLoadProfile(profileId)
+--	if AG and profileId ~= AG.setdata.currentProfileId then
+--		refresh(false, true, "AG_LoadProfile")
+--	end
+--end
+
+local function onInventorySlotUpdated(self, bagId, slotIndex)
+	forceRuleReloadForSlot(bagId, slotIndex)
 end
 
-function AutoCategory.HookKeyboardMode() 
-    
+function AutoCategory.HookKeyboardMode()
+
 	--Add a new data type: row with header
 	local rowHeight = AutoCategory.acctSaved.appearance["CATEGORY_HEADER_HEIGHT"]
 	
@@ -379,27 +457,26 @@ function AutoCategory.HookKeyboardMode()
     AddTypeToList(rowHeight, UNIVERSAL_DECONSTRUCTION.deconstructionPanel.inventory.list, nil)
 	
 	-- sort hooks
-	--ZO_PreHook(ZO_InventoryManager, "ApplySort", prehookSort)
 	ZO_PreHook(PLAYER_INVENTORY, "ApplySort", prehookSort)
     ZO_PreHook(SMITHING.deconstructionPanel.inventory, "SortData", prehookCraftSort)
     ZO_PreHook(SMITHING.improvementPanel.inventory, "SortData", prehookCraftSort)
     ZO_PreHook(UNIVERSAL_DECONSTRUCTION.deconstructionPanel.inventory, "SortData", prehookCraftSort)
 	
-	-- changes detection hook (rules results may have changed)
-	ZO_PreHook(PLAYER_INVENTORY, "OnInventorySlotUpdated", preHookOnInventorySlotUpdated) -- items has been changed
-	-- ZO_PreHook(ZO_QuickslotManager, "DoQuickSlotUpdate", preHookDoQuickSlotUpdate) -- quick slots updated
-	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_STACKED_ALL_ITEMS_IN_BAG, forceInventoryRefresh)
+	--- changes detection events/hook (anticipate if rules results may have changed)
+	ZO_PreHook(PLAYER_INVENTORY, "OnInventorySlotUpdated", onInventorySlotUpdated) -- item has changed
+	ZO_PostHook(ZO_QuickslotManager, "DoQuickSlotUpdate", onDoQuickSlotUpdate) -- quick slots updated
+	CALLBACK_MANAGER:RegisterCallback("LAM-PanelClosed", getRefreshFunc(true, true, "LAM-PanelClosed")) -- AddonMenu panel closed (AC settings, or others, may have changed)
+	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_STACKED_ALL_ITEMS_IN_BAG, getRefreshFunc(true, true, "Event_ItemsStacked"))
 
-	CALLBACK_MANAGER:RegisterCallback("LAM-PanelClosed", preHookLAMPanelClosed) -- AddonMenu panel closed (AC settings may have changed)
-	
+	--- AlphaGear change detection hook
 	if AG then
-		ZO_PostHook(AG, "handlePostChangeGearSetItems", forceInventoryRefresh)
-		ZO_PostHook(AG, "LoadProfile", forceInventoryRefresh)
-	end -- AlphaGear item change
-
-	if PersonalAssistant and PersonalAssistant.Banking then
-		ZO_PostHook(PersonalAssistant.Banking.KeybindStrip, "updateBankKeybindStrip", forceInventoryBankRefresh)
+		ZO_PostHook(AG, "handlePostChangeGearSetItems", getRefreshFunc(true, true, "AG_itemChange"))
+		ZO_PostHook(AG, "LoadProfile", getRefreshFunc(true, true, "AG_LoadProfile")) -- can be called twice in a row...
 	end
+
+	--if PersonalAssistant and PersonalAssistant.Banking then
+	--	ZO_PostHook(PersonalAssistant.Banking.KeybindStrip, "updateBankKeybindStrip", forceInventoryBankRefresh)
+	--end
 end
 
 
