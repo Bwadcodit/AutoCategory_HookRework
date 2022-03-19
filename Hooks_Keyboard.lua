@@ -10,7 +10,7 @@ In order to reduce the impact of the add-on:
 		A global hash is used to trigger re-execution of rules for all items based on: ???
 			- Quickslots: test if quickslots have changed
 		A hash for each item is used to trigger re-execution of rules for a single item based on:
-			- Time: test if the results stored are older than 2 seconds
+			- Time, as a safety net, in case a change were missed for any reason: test if the results stored are older than 2 seconds
 			- Base game data: test various variables like isPlayerLocked, brandNew, isInArmory etc.
 			- FCOIS data: test if item's marks have changed
 		Some API events are monitored:
@@ -165,18 +165,7 @@ local function loadRulesResult(itemEntry, isAtCraftStation)
 end
 
 local function isHiddenEntry(itemEntry)
-	return itemEntry.data.AC_isHidden or (itemEntry.data.AC_bagTypeId ~= nil and ((not matched and isUngroupedHidden(itemEntry.data.AC_bagTypeId)) or AutoCategory.IsCategoryCollapsed(itemEntry.data.AC_bagTypeId, itemEntry.data.AC_categoryName)))
-end
-
-local function createHeaderEntry(itemEntry, reuseCount)
-	local headerEntry = ZO_ScrollList_CreateDataEntry(CATEGORY_HEADER, {bestItemTypeName = itemEntry.data.AC_categoryName, stackLaunderPrice = 0})
-	headerEntry.data.AC_categoryName = itemEntry.data.AC_categoryName
-	headerEntry.data.AC_sortPriorityName = itemEntry.data.AC_sortPriorityName
-	headerEntry.data.AC_isHeader = true
-	headerEntry.data.AC_bagTypeId = itemEntry.data.AC_bagTypeId
-	if reuseCount then headerEntry.data.AC_catCount = itemEntry.data.AC_catCount
-	else headerEntry.data.AC_catCount = 1 end
-	return headerEntry
+	return itemEntry.data.AC_isHidden or (itemEntry.data.AC_bagTypeId ~= nil and ((not itemEntry.data.AC_matched and isUngroupedHidden(itemEntry.data.AC_bagTypeId)) or AutoCategory.IsCategoryCollapsed(itemEntry.data.AC_bagTypeId, itemEntry.data.AC_categoryName)))
 end
 
 -- global variables used by sort hooks for change detection
@@ -221,7 +210,7 @@ local function detectItemChanges(itemEntry)
 	end
 	local newEntryHash = buildHashString(itemEntry.data.isPlayerLocked, itemEntry.data.isGemmable, itemEntry.data.stolen, itemEntry.data.isBoPTradeable, itemEntry.data.isInArmory, itemEntry.data.brandNew, itemEntry.data.bagId, itemEntry.data.stackCount, itemEntry.data.uniqueId, itemEntry.data.slotIndex, itemEntry.data.meetsUsageRequirement, itemEntry.data.locked, itemEntry.data.isJunk, hashFCOIS)
 
-	--- Test hash change
+	--- Update hash and test if changed
 	local changeDetected = false
 	if itemEntry.data.AC_hash == nil or itemEntry.data.AC_hash ~= newEntryHash then
 		if itemEntry.data.AC_hash ~= nil then
@@ -260,7 +249,7 @@ local function handleRules(scrollData, isAtCraftStation)
 	local reloadAll = isAtCraftStation or detectGlobalChanges() -- at craft stations scrollData seems to be reset every time, so need to always reload
 	for _, itemEntry in ipairs(scrollData) do
 		if itemEntry.typeId ~= CATEGORY_HEADER then -- headers are not matched with rules
-			-- 'detectItemChanges(itemEntry) or reloadAll' need to be in this order so hash is always computed and stored
+			-- 'detectItemChanges(itemEntry) or reloadAll' need to be in this order so hash is always updated
 			if detectItemChanges(itemEntry) or reloadAll then -- reload rules if full reload triggered, or changes detected
 				--d("[AUTO-CAT] reloading one: "..tostring(itemEntry.data.AC_hash).." -> "..tostring(newEntryHash))
 				updateCount = updateCount + 1
@@ -272,45 +261,54 @@ local function handleRules(scrollData, isAtCraftStation)
 	return updateCount
 end
 
---- Create new category or update existing. Return created category, or nil.
-local function handleCategory(category_list, itemEntry)
-	local categoryName = itemEntry.data.AC_categoryName
-	if category_list[categoryName] == nil then -- first time seeing this category name -> create new header
-		if itemEntry.typeId == CATEGORY_HEADER then -- a category header already existing in scrollData
-			if AutoCategory.IsCategoryCollapsed(itemEntry.data.AC_bagTypeId, categoryName) then -- the category is collapsed -> matching items are not contained in scrollData input -> reuse previous count
-				category_list[categoryName] = createHeaderEntry(itemEntry, true)
-				return category_list[categoryName]
-			else --> category not collapsed, do not create header here, will recreate and recount items
-				return nil
-			end
-		elseif itemEntry.data.AC_matched or not isUngroupedHidden(itemEntry.data.AC_bagTypeId) then --> regular item, not ungrouped and hidden
-			category_list[categoryName] = createHeaderEntry(itemEntry) -- new header, new count
-			return category_list[categoryName]
-		end
-	elseif itemEntry.typeId ~= CATEGORY_HEADER then -- header already existing -> increment category count if this is not a header
-		category_list[categoryName].data.AC_catCount = category_list[categoryName].data.AC_catCount + 1
-	end
-	return nil
-end
-
-local function createNewScrollData(scrollData, inventoryType)
-	local category_list = {} -- keep track of categories added and their item count
+--- Create list with visible items and header (performs category count).
+local function createNewScrollData(scrollData)
 	local newScrollData = {} -- output, entries sorted with category headers
-	for _, itemEntry in ipairs(scrollData) do -- create newScrollData with headers and only non hidden items
-		if itemEntry.typeId ~= CATEGORY_HEADER then
-			if not isHiddenEntry(itemEntry) then table.insert(newScrollData, itemEntry) end -- add itemEntry if visible
+	local category_dataList = {} -- keep track of categories added and their item count
+	for _, itemEntry in ipairs(scrollData) do -- create newScrollData with headers and only non hidden items. No sorting here
+		if itemEntry.typeId ~= CATEGORY_HEADER and not isHiddenEntry(itemEntry) then -- add item if visible
+			table.insert(newScrollData, itemEntry)
 		end
-		local category = handleCategory(category_list, itemEntry)
-		if category ~= nil then
-			table.insert(newScrollData, category) -- add header or update header count
+		local categorySortName = itemEntry.data.AC_sortPriorityName
+		if categorySortName then
+			if not category_dataList[categorySortName] then -- new category --> track it
+				local catCount = -1
+				local catCountIsNew = false
+				if itemEntry.typeId ~= CATEGORY_HEADER then -- this is an item, start new count
+					catCount = 1 --> new count (counting the current item)
+					catCountIsNew = true
+				elseif itemEntry.typeId == CATEGORY_HEADER and AutoCategory.IsCategoryCollapsed(itemEntry.data.AC_bagTypeId, itemEntry.data.AC_categoryName) then -- this is a collapsed category --> reuse previous count, this is in case the category is collapsed and the content is not available in scrollData
+					catCount = itemEntry.data.AC_catCount
+					catCountIsNew = false
+				end
+				if catCount > 0 then -- else this is an expanded category -> do not reuse
+					category_dataList[categorySortName] =  {name = itemEntry.data.AC_categoryName, bagTypeId = itemEntry.data.AC_bagTypeId, count = catCount, isNewCount = catCountIsNew} -- keep track of categories and required data
+				end
+			elseif itemEntry.typeId ~= CATEGORY_HEADER then -- category is tracked and this a regular item
+				local categoryData = category_dataList[categorySortName]
+				if categoryData.isNewCount then -- new count in progress --> increment
+					categoryData.count = categoryData.count + 1
+				else -- was using previous count --> use new count, (counting the current item)
+					categoryData.count = 1
+					categoryData.isNewCount = true
+				end
+			end
 		end
+	end
+	for categorySortName, categoryData in pairs(category_dataList) do --> add tracked categories
+		local headerEntry = ZO_ScrollList_CreateDataEntry(CATEGORY_HEADER, {bestItemTypeName = categoryData.name, stackLaunderPrice = 0})
+		headerEntry.data.AC_categoryName = categoryData.name
+		headerEntry.data.AC_sortPriorityName = categorySortName
+		headerEntry.data.AC_isHeader = true
+		headerEntry.data.AC_bagTypeId = categoryData.bagTypeId
+		headerEntry.data.AC_catCount = categoryData.count
+		table.insert(newScrollData, headerEntry)
 	end
 	return newScrollData
 end
 
 local function prehookSort(self, inventoryType) 
 	--d("[AUTO-CAT] -> prehookSort ("..inventoryType.." - "..tostring(AutoCategory.Enabled)..") <-- START")
-
 	--- Stop conditions: AC is disabled or quest items are displayed
 	local stop = (not AutoCategory.Enabled) or (inventoryType == INVENTORY_QUEST_ITEM)
 	if stop then return false end -- reverse to default behavior: default ApplySort() function is used
@@ -351,23 +349,28 @@ local function prehookSort(self, inventoryType)
 		forceRuleReloadGlobal("BulkMode") -- trigger rules reload when exiting bulk mode
 		return AutoCategory.IsInHardBulkMode() --- also skip default behavior if hard mode
 	end
+
 	local scrollData = ZO_ScrollList_GetDataList(inventory.listView)
+	--- Retrieve all items that was removed/hidden and add them back. This is to prevent missing changes on hidden/collapsed items.
+	--for _, itemEntry in ipairs(scrollData) do -- Mark all items present in the scroll list as not removed
+	--	itemEntry.data.AC_wasRemoved = false
+	--end
+	--local slots = inventory.slots
+	--for _, bagId in ipairs(inventory.backingBags) do
+	--	if slots[bagId] then
+	--		for _, slotData in pairs(slots[bagId]) do
+	--			local itemEntry = slotData.dataEntry
+	--			if itemEntry and itemEntry.data.AC_wasRemoved then
+	--				table.insert(scrollData, itemEntry)
+	--			end
+	--		end
+	--	end
+	--end
+
 	if #scrollData == 0 then return false end -- empty inventory -> skip rules execution / category handling
 
-	--- a header existing means the scrollData is untouched since last sort
-	local noHeaderFound = true
-	for _, itemEntry in ipairs(scrollData) do
-		if itemEntry.typeId == CATEGORY_HEADER then
-			noHeaderFound = false
-			break
-		end
-	end
-
-	local updateCount = handleRules(scrollData, false)
-	if noHeaderFound or updateCount > 0 then
-		--- scrollData is reset or item(s) updated --> rebuild scrollData with headers
-		inventory.listView.data = createNewScrollData(scrollData, inventoryType)
-	end
+	local updateCount = handleRules(scrollData, false) --> update rules' results if necessary
+	inventory.listView.data = createNewScrollData(scrollData) --> rebuild scrollData with headers and visible items
 	--d("[AUTO-CAT] END - "..inventoryType.." ("..tostring(noHeaderFound)..", "..tostring(updateCount)..")")
 	return false -- continue with default behavior: default ApplySort() function is used with custom inventory sort function
 end
