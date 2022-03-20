@@ -152,6 +152,17 @@ local function loadRulesResult(itemEntry, isAtCraftStation)
 	local specialType = nil
 	if isAtCraftStation then specialType = AC_BAG_TYPE_CRAFTSTATION end
 	local matched, categoryName, categoryPriority, bagTypeId, isHidden = AutoCategory:MatchCategoryRules(itemEntry.data.bagId, itemEntry.data.slotIndex, specialType)
+	if (itemEntry.data.bagId ~= AutoCategory.checkingItemBagId) or (itemEntry.data.slotIndex ~= AutoCategory.checkingItemSlotIndex) then --- Weird bug: sometimes AutoCategory.checkingItemSlotIndex reset to 0 during rules matching and thus the result is invalid
+		--local itemLink1 = GetItemLink(itemEntry.data.bagId, itemEntry.data.slotIndex)
+		--local itemLink2 = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+		--d("[AUTO-CAT] MATCHING BUG: "..itemLink1.."("..tostring(itemEntry.data.bagId).."-"..tostring(itemEntry.data.slotIndex)..") --> "..itemLink2.."("..tostring(AutoCategory.checkingItemBagId).."-"..tostring(AutoCategory.checkingItemSlotIndex)..")")
+		matched, categoryName, categoryPriority, bagTypeId, isHidden = AutoCategory:MatchCategoryRules(itemEntry.data.bagId, itemEntry.data.slotIndex, specialType)
+		if (itemEntry.data.bagId ~= AutoCategory.checkingItemBagId) or (itemEntry.data.slotIndex ~= AutoCategory.checkingItemSlotIndex) then
+			local itemLink1 = GetItemLink(itemEntry.data.bagId, itemEntry.data.slotIndex)
+			local itemLink2 = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+			d("[AUTO-CAT] MATCHING BUG 2: "..itemLink1.."("..tostring(itemEntry.data.bagId).."-"..tostring(itemEntry.data.slotIndex)..") --> "..itemLink2.."("..tostring(AutoCategory.checkingItemBagId).."-"..tostring(AutoCategory.checkingItemSlotIndex)..")")
+		end
+	end
 	itemEntry.data.AC_matched = matched
 	if matched then
 		itemEntry.data.AC_categoryName = categoryName
@@ -249,7 +260,7 @@ local function handleRules(scrollData, isAtCraftStation)
 	local reloadAll = isAtCraftStation or detectGlobalChanges() -- at craft stations scrollData seems to be reset every time, so need to always reload
 	for _, itemEntry in ipairs(scrollData) do
 		if itemEntry.typeId ~= CATEGORY_HEADER then -- headers are not matched with rules
-			-- 'detectItemChanges(itemEntry) or reloadAll' need to be in this order so hash is always updated
+			--- 'detectItemChanges(itemEntry) or reloadAll' need to be in this order so hash is always updated
 			if detectItemChanges(itemEntry) or reloadAll then -- reload rules if full reload triggered, or changes detected
 				--d("[AUTO-CAT] reloading one: "..tostring(itemEntry.data.AC_hash).." -> "..tostring(newEntryHash))
 				updateCount = updateCount + 1
@@ -351,27 +362,11 @@ local function prehookSort(self, inventoryType)
 	end
 
 	local scrollData = ZO_ScrollList_GetDataList(inventory.listView)
-	--- Retrieve all items that was removed/hidden and add them back. This is to prevent missing changes on hidden/collapsed items.
-	--for _, itemEntry in ipairs(scrollData) do -- Mark all items present in the scroll list as not removed
-	--	itemEntry.data.AC_wasRemoved = false
-	--end
-	--local slots = inventory.slots
-	--for _, bagId in ipairs(inventory.backingBags) do
-	--	if slots[bagId] then
-	--		for _, slotData in pairs(slots[bagId]) do
-	--			local itemEntry = slotData.dataEntry
-	--			if itemEntry and itemEntry.data.AC_wasRemoved then
-	--				table.insert(scrollData, itemEntry)
-	--			end
-	--		end
-	--	end
-	--end
-
 	if #scrollData == 0 then return false end -- empty inventory -> skip rules execution / category handling
 
 	local updateCount = handleRules(scrollData, false) --> update rules' results if necessary
 	inventory.listView.data = createNewScrollData(scrollData) --> rebuild scrollData with headers and visible items
-	--d("[AUTO-CAT] END - "..inventoryType.." ("..tostring(noHeaderFound)..", "..tostring(updateCount)..")")
+	--d("[AUTO-CAT] END - "..inventoryType.." ("..tostring(updateCount)..")")
 	return false -- continue with default behavior: default ApplySort() function is used with custom inventory sort function
 end
 
@@ -445,7 +440,6 @@ local function onInventorySlotUpdated(self, bagId, slotIndex)
 end
 
 function AutoCategory.HookKeyboardMode()
-
 	--Add a new data type: row with header
 	local rowHeight = AutoCategory.acctSaved.appearance["CATEGORY_HEADER_HEIGHT"]
 	
@@ -476,10 +470,6 @@ function AutoCategory.HookKeyboardMode()
 		ZO_PostHook(AG, "handlePostChangeGearSetItems", getRefreshFunc(true, true, "AG_itemChange"))
 		ZO_PostHook(AG, "LoadProfile", getRefreshFunc(true, true, "AG_LoadProfile")) -- can be called twice in a row...
 	end
-
-	--if PersonalAssistant and PersonalAssistant.Banking then
-	--	ZO_PostHook(PersonalAssistant.Banking.KeybindStrip, "updateBankKeybindStrip", forceInventoryBankRefresh)
-	--end
 end
 
 
