@@ -363,6 +363,16 @@ local function prehookSort(self, inventoryType)
 	local scrollData = ZO_ScrollList_GetDataList(inventory.listView)
 	if #scrollData == 0 then return false end --- empty inventory -> skip rules execution / category handling
 
+	if hashGlobal == "forceRuleReloadGlobal-Event_ItemsStacked" then --- TWEAK: remove all new flags if stacking all items
+		for _, itemEntry in ipairs(scrollData) do
+			if itemEntry.typeId ~= CATEGORY_HEADER and itemEntry.data.brandNew then
+				itemEntry.data.clearAgeOnClose = nil -- code here comes from inventory.lua:1926
+				SHARED_INVENTORY:ClearNewStatus(itemEntry.data.bagId, itemEntry.data.slotIndex)
+				--ZO_SharedInventoryManager:ClearNewStatus(itemEntry.bagId, itemEntry.slotIndex)
+			end
+		end
+	end
+
 	local updateCount = handleRules(scrollData, false) ---> update rules' results if necessary
 	inventory.listView.data = createNewScrollData(scrollData) ---> rebuild scrollData with headers and visible items
 	--d("[AUTO-CAT] END - "..inventoryType.." ("..tostring(updateCount)..")")
