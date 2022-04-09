@@ -683,6 +683,7 @@ function AutoCategory.RefreshCurrentList(even_if_hidden)
 	RefreshList(INVENTORY_BANK, even_if_hidden)
 	RefreshList(AC_DECON, even_if_hidden)
 	RefreshList(AC_IMPROV, even_if_hidden)
+	RefreshList(UV_DECON, even_if_hidden)
 end
 
 function AutoCategory.RefreshAllLists()

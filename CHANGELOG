@@ -1,3 +1,8 @@
+[COLOR="DeepSkyBlue"]2.37(64)[/COLOR]:
+[LIST]
+[*] Fix the category headers in Giladil's deconstruction list so that they will expand and contract properly.
+[/LIST]
+
 [COLOR="DeepSkyBlue"]2.36(63)[/COLOR]:
 [LIST]
 [*] Add AutoCategory sorting to Giladil The Rag Picker's deconstruction screen.
