@@ -1,3 +1,16 @@
+[COLOR="DeepSkyBlue"]3.0.1(66)[/COLOR]:
+[LIST]
+[*] Comment out the Quickslots hook that was changed in High Isle until I can take a look at it.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.0(65)[/COLOR]:
+[LIST]
+[*] Major rewrite of rule processing to enable speed ups for guild bank handling - heavily based on the code contributed by Bwadrochit -. Thank you!
+[*] The problem with stacksize() == 200 should be fixed.
+[*] The empty New category is no longer reproducable.
+[*] API bump (High Isle)
+[/LIST]
+
 [COLOR="DeepSkyBlue"]2.37(64)[/COLOR]:
 [LIST]
 [*] Fix the category headers in Giladil's deconstruction list so that they will expand and contract properly.

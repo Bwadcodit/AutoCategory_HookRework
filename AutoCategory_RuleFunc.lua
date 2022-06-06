@@ -524,15 +524,12 @@ function AutoCategory.RuleFunc.IsInCurrentZone( ... )
 	local logger = LibDebugLogger("AutoCategory")
 	--logger:SetEnabled(true)
 	local zoneName = string.lower(ZO_CachedStrFormat("<<C:1>>", GetZoneNameByIndex(GetCurrentMapZoneIndex())))
-	--logger:Error("AC itemName="..itemName.."   zoneName="..zoneName)
 	if( string.find(zoneName,"alik'r") ~= nil ) then
 		-- because maps never say "Alik'r Desert"
 		zoneName = "alik'r"	
-	    --logger:Error("AC 2 itemName="..itemName.."   zoneName="..zoneName)
 	end
 	
 	if string.find(itemName,zoneName) ~= nil then
-		--logger:Error("AC itemName="..itemName.."   found in zoneName="..zoneName)
 		--logger:SetEnabled(false)
 	    return true
 	end
@@ -673,7 +670,7 @@ function AutoCategory.RuleFunc.IsCollected( ... )
 end
 
 function AutoCategory.RuleFunc.IsNotCollected( ... )
-	local fn = "iscollected"
+	local fn = "isnotcollected"
 	
 	local itemLink = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 	local itemId = GetItemLinkItemId(itemLink)
