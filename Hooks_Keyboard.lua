@@ -233,7 +233,7 @@ end
 
 local function detectGlobalChanges()
 	-- return false
-	local quickSlotHash = "" --- retrieve quickslots uniqueIDs
+	local quickSlotHash = "quickSlotHash" --- retrieve quickslots uniqueIDs
 	-- for i = ACTION_BAR_FIRST_UTILITY_BAR_SLOT + 1, ACTION_BAR_FIRST_UTILITY_BAR_SLOT + ACTION_BAR_EMOTE_QUICK_SLOT_SIZE do
 	-- for i = 8 + 1, 8 + 8 do
 	-- 	quickSlotHash = quickSlotHash .. ":" .. tostring(GetSlotItemLink(i))
@@ -462,15 +462,9 @@ local function prehookSort(self, inventoryType)
 	local list = inventory.listView 
 	local scrollData = ZO_ScrollList_GetDataList(list) 
 	local bagId = getListBagID(scrollData)
-	
-	local needsReload = false
-	-- local needsReload = true
-	-- if scene == "bank" or scene == "guildBank" then
-	-- 	needsReload = false
-	-- end
-	handleRules(scrollData, needsReload) --> update rules' results if necessary
 
-	if hashGlobal == "forceRuleReloadGlobal-Event_ItemsStacked" then --- TWEAK: remove all new flags if stacking all items
+	-- if hashGlobal == "forceRuleReloadGlobal-Event_ItemsStacked" then
+	if hashGlobal == SF.str("forceRuleReloadGlobal-", tostring("Event_ItemsStacked")) then --- TWEAK: remove all new flags if stacking all items
 		for _, itemEntry in ipairs(scrollData) do
 			if itemEntry.typeId ~= CATEGORY_HEADER and itemEntry.data.brandNew then
 				itemEntry.data.clearAgeOnClose = nil -- code here comes from inventory.lua:1926
@@ -479,7 +473,14 @@ local function prehookSort(self, inventoryType)
 			end
 		end
 	end
-	
+
+	local needsReload = false
+	-- local needsReload = true
+	-- if scene == "bank" or scene == "guildBank" then
+	-- 	needsReload = false
+	-- end
+	handleRules(scrollData, needsReload) --> update rules' results if necessary
+
 	-- add header rows	   
 	list.data = createNewScrollData(scrollData) --> rebuild scrollData with headers and visible items
 	table.sort(scrollData, inventory.sortFn)  
