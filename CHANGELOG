@@ -1,3 +1,8 @@
+[COLOR="DeepSkyBlue"]3.0.2(67)[/COLOR]:
+[LIST]
+[*] Fixed remaining issues with High Isle (at least on the PTS server since NA megaserver is still down).
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.0.1(66)[/COLOR]:
 [LIST]
 [*] Comment out the Quickslots hook that was changed in High Isle until I can take a look at it.
