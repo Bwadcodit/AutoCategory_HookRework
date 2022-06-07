@@ -226,26 +226,27 @@ local function sortInventoryFn(inven, left, right, key, order)
 			key, sortKeys, order)
 end
 
---local hashGlobal = "InitialHash" --- a hash representing the last 'global state', so changes can be detected.
+local hashGlobal = "InitialHash" --- a hash representing the last 'global state', so changes can be detected.
 local function forceRuleReloadGlobal(reloadTypeString)
-	--hashGlobal = SF.str("forceRuleReloadGlobal-", tostring(reloadTypeString))
+	hashGlobal = SF.str("forceRuleReloadGlobal-", tostring(reloadTypeString))
 end
 
 local function detectGlobalChanges()
-	return false
-	--[[
+	-- return false
 	local quickSlotHash = "" --- retrieve quickslots uniqueIDs
-	for i = ACTION_BAR_FIRST_UTILITY_BAR_SLOT + 1, ACTION_BAR_FIRST_UTILITY_BAR_SLOT + ACTION_BAR_EMOTE_QUICK_SLOT_SIZE do
-		quickSlotHash = quickSlotHash .. ":" .. tostring(GetSlotItemLink(i))
-	end
+	-- for i = ACTION_BAR_FIRST_UTILITY_BAR_SLOT + 1, ACTION_BAR_FIRST_UTILITY_BAR_SLOT + ACTION_BAR_EMOTE_QUICK_SLOT_SIZE do
+	-- for i = 8 + 1, 8 + 8 do
+	-- 	quickSlotHash = quickSlotHash .. ":" .. tostring(GetSlotItemLink(i))
+	-- end
 	local newHash = buildHashString(quickSlotHash) --- use hash for change detection
+	-- d("OLD HASH : "..tostring(hashGlobal))
+	-- d("NEW HASH : "..tostring(newHash))
 	if newHash ~= hashGlobal then 
 		-- changes detected
 		hashGlobal = newHash --- reset hash for next hook
 		return true
 	end
 	return false
-	--]]
 end
 
 -- uniqueIDs of items that have been updated (need rule re-execution), 
@@ -447,11 +448,12 @@ local function prehookSort(self, inventoryType)
 	if SCENE_MANAGER and SCENE_MANAGER:GetCurrentScene() then
 		scene = SCENE_MANAGER:GetCurrentScene():GetName()
 	end
+
 	if scene then
 		if AutoCategory.BulkMode and AutoCategory.BulkMode == true then
-			if scene == "guildBank" or (XLGearBanker and scene == "bank") then
-				--forceRuleReloadGlobal("BulkMode") --- trigger rules reload when exiting bulk mode
-				return false	-- skip out early
+			if scene == "guildBank" or scene == "bank" then
+				forceRuleReloadGlobal("BulkMode") --- trigger rules reload when exiting bulk mode
+				return true	-- skip out early
 			end
 		end
 	end	
@@ -461,12 +463,22 @@ local function prehookSort(self, inventoryType)
 	local scrollData = ZO_ScrollList_GetDataList(list) 
 	local bagId = getListBagID(scrollData)
 	
-	local needsReload = true
-	if scene == "bank" or scene == "guildBank" then
-		needsReload = false
-	end
+	local needsReload = false
+	-- local needsReload = true
+	-- if scene == "bank" or scene == "guildBank" then
+	-- 	needsReload = false
+	-- end
 	handleRules(scrollData, needsReload) --> update rules' results if necessary
 
+	if hashGlobal == "forceRuleReloadGlobal-Event_ItemsStacked" then --- TWEAK: remove all new flags if stacking all items
+		for _, itemEntry in ipairs(scrollData) do
+			if itemEntry.typeId ~= CATEGORY_HEADER and itemEntry.data.brandNew then
+				itemEntry.data.clearAgeOnClose = nil -- code here comes from inventory.lua:1926
+				SHARED_INVENTORY:ClearNewStatus(itemEntry.data.bagId, itemEntry.data.slotIndex)
+				--ZO_SharedInventoryManager:ClearNewStatus(itemEntry.bagId, itemEntry.slotIndex)
+			end
+		end
+	end
 	
 	-- add header rows	   
 	list.data = createNewScrollData(scrollData) --> rebuild scrollData with headers and visible items
@@ -499,9 +511,9 @@ end
 
 -- perform refresh of list
 local function refresh(refreshList, forceRuleReload, reloadTypeString)
-	--if forceRuleReload then
-	--	forceRuleReloadGlobal(reloadTypeString)
-	--end
+	if forceRuleReload then
+		forceRuleReloadGlobal(reloadTypeString)
+	end
 	if refreshList then
 		AutoCategory.RefreshCurrentList()
 	end
@@ -514,13 +526,12 @@ local function getRefreshFunc(refreshList, forceRuleReload, reloadTypeString)
 		end
 end
 
---[[ new hook
+-- new hook
 local function onDoQuickSlotUpdate(self, physicalSlot, animationOption)
 	if animationOption then --- a quickslot has been changed (manually)
 		refresh(true, false, "QuickSlot_update")
 	end
 end
---]]
 
 -- new hook
 local function onInventorySlotUpdated(self, bagId, slotIndex)
@@ -559,14 +570,13 @@ function AutoCategory.HookKeyboardMode()
 	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_STACKED_ALL_ITEMS_IN_BAG, 
 			getRefreshFunc(true, true, "Event_ItemsStacked"))
 
-	--[[ AlphaGear change detection hook
+	-- AlphaGear change detection hook
 	if AG then
 		ZO_PostHook(AG, "handlePostChangeGearSetItems", 
 				getRefreshFunc(true, true, "AG_itemChange"))
 		ZO_PostHook(AG, "LoadProfile", 
 				getRefreshFunc(true, true, "AG_LoadProfile")) -- can be called twice in a row...
 	end
-	--]]
 end
 
 
