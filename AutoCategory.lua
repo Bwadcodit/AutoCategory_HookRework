@@ -83,8 +83,9 @@ function AutoCategory.CompileRule(rule)
 	rule.damaged = nil
 	rule.err = nil
 	AC.compiledRules[rule.name] = nil
-	if rule.rule == nil then
+	if rule.rule == nil or rule.rule == "" then
 		rule.err = "Missing rule definition"
+		rule.damaged = true
          logger:SetEnabled(false)
         return err
 	end
@@ -660,6 +661,7 @@ local inven_data = {
 	[UV_DECON] = {
 		object = UNIVERSAL_DECONSTRUCTION.deconstructionPanel.inventory,
 		control = UNIVERSAL_DECONSTRUCTION.deconstructionPanel.control,
+		--ZO_UniversalDeconstructionPanel_Keyboard
 	},
 }
 
@@ -671,19 +673,18 @@ local function RefreshList(inventoryType, even_if_hidden)
 	if not inventoryType or not inven_data[inventoryType] then return end
 	
 	local obj = inven_data[inventoryType].object
-	local control = inven_data[inventoryType].control
 
 	if inventoryType == AC_DECON then
-		if even_if_hidden == false and not control:IsHidden() then
-			object:PerformFullRefresh()
+		if even_if_hidden == false and not SMITHING.deconstructionPanel.control:IsHidden() then
+			SMITHING.deconstructionPanel.inventory:PerformFullRefresh()
 		end
 	elseif inventoryType == AC_IMPROV then
-		if even_if_hidden == false and not control:IsHidden() then
-			object:PerformFullRefresh()
+		if even_if_hidden == false and not SMITHING.improvementPanel.control:IsHidden() then
+			SMITHING.improvementPanel.inventory:PerformFullRefresh()
 		end
 	elseif inventoryType == UV_DECON then
-		if even_if_hidden == false and not control:IsHidden() then
-			object:PerformFullRefresh()
+		if even_if_hidden == false and not UNIVERSAL_DECONSTRUCTION.deconstructionPanel.control:IsHidden() then
+			UNIVERSAL_DECONSTRUCTION.deconstructionPanel.inventory:PerformFullRefresh()
 		end
 	else
 		PLAYER_INVENTORY:UpdateList(inventoryType, even_if_hidden)

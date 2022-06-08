@@ -128,6 +128,13 @@ local function checkCurrentRule()
         return
     end
     
+    if fieldData.currentRule.rule == nil or fieldData.currentRule.rule == "" then
+		fieldData.currentRule.err = "Rule definition cannot be empty"
+		ruleCheckStatus.err = fieldData.currentRule.err
+		fieldData.currentRule.damaged = true 
+        return
+    end
+    
     local func, err = zo_loadstring("return("..fieldData.currentRule.rule..")")
     if err then
 		-- logger.error("FAILED rule compile - "..err)
