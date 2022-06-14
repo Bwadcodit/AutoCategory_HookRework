@@ -9,10 +9,13 @@ local SF = LibSFUtils
 -- It is hoped that by entering into bulk mode that we do not perform
 -- server requests for the guild bank 
 function AutoCategory.EnterBulkMode()
-	AutoCategory.BulkMode(true)
+	AutoCategory.BulkMode = true
 end
 function AutoCategory.ExitBulkMode()
-	AutoCategory.BulkMode(false)
+	if AutoCategory.BulkMode and AutoCategory.BulkMode == true then
+		AutoCategory.BulkMode = false
+		AutoCategory.RefreshCurrentList()
+	end
 end
 
 
