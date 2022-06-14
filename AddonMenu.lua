@@ -121,28 +121,17 @@ local function checkKeywords(str)
    return result
 end
 
---[[
-function AutoCategory.CompileRule(rule)
-  if rule == nil then return end
-  
-	local rulestr = "return("..rule.rule..")"
-	local compiledfunc,err = zo_loadstring(rulestr)
-    if not compiledfunc then
-		rule.damaged = true
-		logger:Error("Failure to compile rule "..rulestr..". ERROR: "..err)
-		logger:SetEnabled(false)
-      return err
-    end
-	logger:SetEnabled(false)
-    AC.compiledRules[rule.name] = compiledfunc
-    return ""
-end
-
---]]
 local function checkCurrentRule()
     ruleCheckStatus.err = nil
     ruleCheckStatus.good = nil
     if fieldData.currentRule == nil then
+        return
+    end
+    
+    if fieldData.currentRule.rule == nil or fieldData.currentRule.rule == "" then
+		fieldData.currentRule.err = "Rule definition cannot be empty"
+		ruleCheckStatus.err = fieldData.currentRule.err
+		fieldData.currentRule.damaged = true 
         return
     end
     
@@ -1195,7 +1184,7 @@ function AutoCategory.AddonMenuInit()
                     getFunc = function() return saved.general["SHOW_CATEGORY_COLLAPSE_ICON"] end,
                     setFunc = function(value) 
                     	saved.general["SHOW_CATEGORY_COLLAPSE_ICON"] = value 
-                    	AutoCategory.RefreshAllLists()
+                    	AutoCategory.RefreshCurrentList(true)
                     end,
                 },                
                 -- Save category collapse status

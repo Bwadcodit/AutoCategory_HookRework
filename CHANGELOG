@@ -1,3 +1,33 @@
+[COLOR="DeepSkyBlue"]3.0.4(69)[/COLOR]:
+[LIST]
+[*] Changed item count color to the same color as the rest of the category header. (Contributed by kueqvzzv.)
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.0.3(68)[/COLOR]:
+[LIST]
+[*] Issue with the header collapse/uncollapse at the deconstruct stations and the Rag Picker is fixed. (Reported by IsharaMeradin, AlbertVonMoosseedorf, SamBF1991, and others)
+[*] Adding checking to gracefully complain about a rule that has an empty definition instead of just throwing an error. (reported by SerLoras)
+[*] Raised the minimum version for LibSFUtils that AutoCategory requires. (Thanks Saenic!)
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.0.2(67)[/COLOR]:
+[LIST]
+[*] Fixed remaining issues with High Isle (at least on the PTS server since NA megaserver is still down).
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.0.1(66)[/COLOR]:
+[LIST]
+[*] Comment out the Quickslots hook that was changed in High Isle until I can take a look at it.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.0(65)[/COLOR]:
+[LIST]
+[*] Major rewrite of rule processing to enable speed ups for guild bank handling - heavily based on the code contributed by Bwadrochit -. Thank you!
+[*] The problem with stacksize() == 200 should be fixed.
+[*] The empty New category is no longer reproducable.
+[*] API bump (High Isle)
+[/LIST]
+
 [COLOR="DeepSkyBlue"]2.37(64)[/COLOR]:
 [LIST]
 [*] Fix the category headers in Giladil's deconstruction list so that they will expand and contract properly.
