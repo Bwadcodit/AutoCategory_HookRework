@@ -673,24 +673,29 @@ local function RefreshList(inventoryType, even_if_hidden)
 	if not inventoryType or not inven_data[inventoryType] then return end
 	
 	local obj = inven_data[inventoryType].object
+	local ctl = inven_data[inventoryType].control
 
 	if inventoryType == AC_DECON then
-		if even_if_hidden == false and not SMITHING.deconstructionPanel.control:IsHidden() then
-			SMITHING.deconstructionPanel.inventory:PerformFullRefresh()
+		if even_if_hidden == false and not ctl:IsHidden() then
+			obj:PerformFullRefresh()
 		end
+		
 	elseif inventoryType == AC_IMPROV then
-		if even_if_hidden == false and not SMITHING.improvementPanel.control:IsHidden() then
-			SMITHING.improvementPanel.inventory:PerformFullRefresh()
+		if even_if_hidden == false and not ctl:IsHidden() then
+			obj:PerformFullRefresh()
 		end
+		
 	elseif inventoryType == UV_DECON then
-		if even_if_hidden == false and not UNIVERSAL_DECONSTRUCTION.deconstructionPanel.control:IsHidden() then
-			UNIVERSAL_DECONSTRUCTION.deconstructionPanel.inventory:PerformFullRefresh()
+		if even_if_hidden == false and not ctl:IsHidden() then
+			obj:PerformFullRefresh()
 		end
+		
 	else
 		PLAYER_INVENTORY:UpdateList(inventoryType, even_if_hidden)
 	end
 end
 
+AutoCategory.RefreshList = RefreshList
 
 function AutoCategory.RefreshCurrentList(even_if_hidden)
 	if not even_if_hidden then even_if_hidden = false end
@@ -705,12 +710,7 @@ function AutoCategory.RefreshCurrentList(even_if_hidden)
 	RefreshList(UV_DECON, even_if_hidden)
 end
 
-function AutoCategory.RefreshAllLists()
 
-	AC.RefreshCurrentList(true)
-	
-end
---]]
 function AC_ItemRowHeader_OnMouseEnter(header)
     local cateName = header.slot.dataEntry.data.AC_categoryName	
     local bagTypeId = getBagTypeId(header)

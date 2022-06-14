@@ -1184,7 +1184,7 @@ function AutoCategory.AddonMenuInit()
                     getFunc = function() return saved.general["SHOW_CATEGORY_COLLAPSE_ICON"] end,
                     setFunc = function(value) 
                     	saved.general["SHOW_CATEGORY_COLLAPSE_ICON"] = value 
-                    	AutoCategory.RefreshAllLists()
+                    	AutoCategory.RefreshCurrentList(true)
                     end,
                 },                
                 -- Save category collapse status
