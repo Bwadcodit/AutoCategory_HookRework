@@ -103,8 +103,11 @@ function AutoCategory:MatchCategoryRules( bagId, slotIndex, specialType )
 	
 	AutoCategory.LazyInit()
 
+	-- set up bagId and slotIndex to "pass in" to the rule functions
 	self.checkingItemBagId = bagId
 	self.checkingItemSlotIndex = slotIndex
+	self.checkingItemLink = GetItemLink(bagId, slotIndex)
+
 	
 	local bag_type_id = convert2BagTypeId(bagId, specialType)
 	if not bag_type_id then
@@ -140,7 +143,6 @@ function AutoCategory:MatchCategoryRules( bagId, slotIndex, specialType )
 	end
 	
 	
-	--local needCheck = false
 	local bag = AutoCategory.saved.bags[bag_type_id]
 	if not bag then
 		logger:Error("[MatchCategoryRules] bag for bag_type_id ("..bag_type_id..") was nil")

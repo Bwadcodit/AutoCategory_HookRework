@@ -156,10 +156,19 @@ local function isHiddenEntry(itemEntry)
 		return true 
 	end
 	
+	return false --AutoCategory.IsCategoryCollapsed(data.AC_bagTypeId, data.AC_categoryName)
+end
+
+local function isCollapsed(itemEntry)
+	if not itemEntry or not itemEntry.data then return false end
+	
+	local data = itemEntry.data
+	if data.AC_bagTypeId == nil then return true end
+	
 	return AutoCategory.IsCategoryCollapsed(data.AC_bagTypeId, data.AC_categoryName)
 end
 
-local function runRulesOnEntry(itemEntry)
+local function runRulesOnEntry(itemEntry, specialType)
 	--only match on items(not headers)
 	if itemEntry.typeId == CATEGORY_HEADER then return end
 	
@@ -168,7 +177,7 @@ local function runRulesOnEntry(itemEntry)
 	local slotIndex = data.slotIndex
 	
 	local matched, categoryName, categoryPriority, bagTypeId, isHidden 
-				= AutoCategory:MatchCategoryRules(bagId, slotIndex)
+				= AutoCategory:MatchCategoryRules(bagId, slotIndex, specialType)
 	data.AC_matched = matched
 	if matched then
 		data.AC_categoryName = categoryName
@@ -183,17 +192,6 @@ local function runRulesOnEntry(itemEntry)
 	data.AC_bagTypeId = bagTypeId
 	data.AC_isHeader = false
 		
-end
-
-local function createHeaderEntry(catInfo)
-	local headerEntry = ZO_ScrollList_CreateDataEntry(CATEGORY_HEADER, { 
-			AC_categoryName = catInfo.AC_categoryName,
-			AC_sortPriorityName = catInfo.AC_sortPriorityName,
-			AC_bagTypeId = catInfo.AC_bagTypeId,
-			AC_isHeader = true,
-			AC_catCount = catInfo.AC_catCount,
-			stackLaunderPrice = 0})
-	return headerEntry
 end
 
 local function sortInventoryFn(inven, left, right, key, order) 
@@ -293,7 +291,7 @@ end
 -- The needsReload parameter allows the caller to force a re-evaluation
 -- of rule on all of the (non-header) contents of the scrollData.
 -- Defaults to false.
-local function handleRules(scrollData, needsReload)
+local function handleRules(scrollData, needsReload, specialType)
 	-- keep track of if any changes to rule results occurred
 	local updateCount = 0 
 	
@@ -307,7 +305,7 @@ local function handleRules(scrollData, needsReload)
 			if detectItemChanges(itemEntry, newHash, reloadAll) then 
 				-- reload rules if full reload triggered, or changes detected
 				updateCount = updateCount + 1
-				runRulesOnEntry(itemEntry)
+				runRulesOnEntry(itemEntry, specialType)
 			end
 		end
 	end
@@ -366,43 +364,43 @@ local function createNewScrollData(scrollData)
 	-- create newScrollData with headers and only non hidden items. No sorting here!
 	for _, itemEntry in ipairs(scrollData) do 
 		-- add visible non-header rows to the new scrollData table
-		if itemEntry.typeId ~= CATEGORY_HEADER 
-		and not isHiddenEntry(itemEntry) then 
-			-- add item if visible
-			table.insert(newScrollData, itemEntry)
-		end
-		
-		-- look up the owning category in our list, update entry count
-		-- or else create an entry with count = 1
-		-- (We count them even if not visible!)
-		local data = itemEntry.data
-		
-		local AC_categoryName = data.AC_categoryName
-		if not categoryList[AC_categoryName] then 
-		
-			-- keep track of categories and required data
-			categoryList[AC_categoryName] =  {
-				AC_sortPriorityName = data.AC_sortPriorityName,
-				AC_categoryName = AC_categoryName, 
-				AC_bagTypeId = data.AC_bagTypeId, 
-				AC_catCount = 0, 
-				isNewCount = false,
-			} 
-		end
-		local catInfo = categoryList[AC_categoryName]
-		
-		local catCountIsNew = false
-		if itemEntry.typeId ~= CATEGORY_HEADER then 
-			-- this is an item, start new count
-			addCount(AC_categoryName)
-			catCountIsNew = true
+		if not isHiddenEntry(itemEntry) then
+			if itemEntry.typeId ~= CATEGORY_HEADER and not isCollapsed(itemEntry) then 
+				-- add item if visible
+				table.insert(newScrollData, itemEntry)
+			end
 			
-		elseif itemEntry.typeId == CATEGORY_HEADER 
-			and AutoCategory.IsCategoryCollapsed(data.AC_bagTypeId, AC_categoryName) then 
-			-- this is a collapsed category --> reuse previous count, since
-			--   the content is not available in scrollData
-			setCount(AC_categoryName, data.AC_catCount)
-			catCountIsNew = false
+			-- look up the owning category in our list, update entry count
+			-- or else create an entry with count = 1
+			local data = itemEntry.data
+			
+			local AC_categoryName = data.AC_categoryName
+			if not categoryList[AC_categoryName] then 
+			
+				-- keep track of categories and required data
+				categoryList[AC_categoryName] =  {
+					AC_sortPriorityName = data.AC_sortPriorityName,
+					AC_categoryName = AC_categoryName, 
+					AC_bagTypeId = data.AC_bagTypeId, 
+					AC_catCount = 0, 
+					isNewCount = false,
+				} 
+			end
+			local catInfo = categoryList[AC_categoryName]
+			
+			local catCountIsNew = false
+			if itemEntry.typeId ~= CATEGORY_HEADER then 
+				-- this is an item, start new count
+				addCount(AC_categoryName)
+				catCountIsNew = true
+				
+			elseif itemEntry.typeId == CATEGORY_HEADER 
+				and AutoCategory.IsCategoryCollapsed(data.AC_bagTypeId, AC_categoryName) then 
+				-- this is a collapsed category --> reuse previous count, since
+				--   the content is not available in scrollData
+				setCount(AC_categoryName, data.AC_catCount)
+				catCountIsNew = false
+			end
 		end
 						
 	end
@@ -480,7 +478,7 @@ local function prehookCraftSort(self)
 	local scrollData = ZO_ScrollList_GetDataList(self.list)
 	if #scrollData > 0 then
 		-- rerun rules for all items (always for craftstations)
-		handleRules(scrollData, true)
+		handleRules(scrollData, true, AC_BAG_TYPE_CRAFTSTATION)
 
 		-- add header rows	    
 		self.list.data = createNewScrollData(scrollData)
