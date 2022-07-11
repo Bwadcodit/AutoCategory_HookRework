@@ -1,3 +1,9 @@
+[COLOR="DeepSkyBlue"]3.1.5(75)[/COLOR]:
+[LIST]
+[*] New French translations for text in AutoCategory provided by XXXspartiateXXX. Note that you may need to delete your saved variables for AutoCategory in order for the new translations to be used inside your rules.
+[*] Fixed visibility so that when changing inventory sorting such as sort by status, name, value or even add-on sorting like quality sort add-on, collapsed categories are hidden, only revealed back when collapsing another category. (Reported by Anntauri)
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.1.4(74)[/COLOR]:
 [LIST]
 [*] Fix for a nil function call specific to using the Rag Picker.
