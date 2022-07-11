@@ -337,8 +337,8 @@ local function createNewScrollData(scrollData)
 	-- The categoryList info is collected and then each entry is passed
 	-- to createHeaderEntry() to make a header row
 	local categoryList = {} -- [name] {AC_catCount, AC_sortPriorityName,
-							--         AC_categoryName, AC_bagTypeId,
-							--         isNewCount}
+							--         AC_categoryName, AC_bagTypeId }
+							
 	local function addCount(name)
 		categoryList[name] = SF.safeTable(categoryList[name])
 		if categoryList[name].AC_catCount == nil then
@@ -360,7 +360,6 @@ local function createNewScrollData(scrollData)
 		categoryList[name].AC_catCount = count
 	end
 	-- --------------------
-	
 	-- create newScrollData with headers and only non hidden items. No sorting here!
 	for _, itemEntry in ipairs(scrollData) do 
 		-- add visible non-header rows to the new scrollData table
@@ -369,45 +368,39 @@ local function createNewScrollData(scrollData)
 				-- add item if visible
 				table.insert(newScrollData, itemEntry)
 			end
-			
-			-- look up the owning category in our list, update entry count
-			-- or else create an entry with count = 1
-			local data = itemEntry.data
-			
-			local AC_categoryName = data.AC_categoryName
-			if not categoryList[AC_categoryName] then 
-			
-				-- keep track of categories and required data
-				categoryList[AC_categoryName] =  {
-					AC_sortPriorityName = data.AC_sortPriorityName,
-					AC_categoryName = AC_categoryName, 
-					AC_bagTypeId = data.AC_bagTypeId, 
-					AC_catCount = 0, 
-					isNewCount = false,
-				} 
-			end
-			local catInfo = categoryList[AC_categoryName]
-			
-			local catCountIsNew = false
-			if itemEntry.typeId ~= CATEGORY_HEADER then 
-				-- this is an item, start new count
-				addCount(AC_categoryName)
-				catCountIsNew = true
-				
-			elseif itemEntry.typeId == CATEGORY_HEADER 
-				and AutoCategory.IsCategoryCollapsed(data.AC_bagTypeId, AC_categoryName) then 
-				-- this is a collapsed category --> reuse previous count, since
-				--   the content is not available in scrollData
-				setCount(AC_categoryName, data.AC_catCount)
-				catCountIsNew = false
-			end
 		end
-						
+
+		-- look up the owning category in our list, update entry count
+		-- or else create an entry with count = 1
+		local data = itemEntry.data
+		local AC_categoryName = data.AC_categoryName
+		if not categoryList[AC_categoryName] then 
+		
+			-- keep track of categories and required data
+			categoryList[AC_categoryName] =  {
+				AC_sortPriorityName = data.AC_sortPriorityName,
+				AC_categoryName = AC_categoryName, 
+				AC_bagTypeId = data.AC_bagTypeId, 
+				AC_catCount = 0, 
+			} 
+		end
+		local catInfo = categoryList[AC_categoryName]
+		
+		if itemEntry.typeId ~= CATEGORY_HEADER then 
+			-- this is an item, start new count
+			addCount(AC_categoryName)
+			
+		elseif itemEntry.typeId == CATEGORY_HEADER 
+			and AutoCategory.IsCategoryCollapsed(data.AC_bagTypeId, AC_categoryName) then 
+			-- this is a collapsed category --> reuse previous count, since
+			--   the content is not available in scrollData
+			setCount(data.AC_bagTypeId, AC_categoryName, data.AC_catCount)
+		end	
 	end
 	
 	-- Create headers and append to newScrollData
 	for _, catInfo in pairs(categoryList) do ---> add tracked categories
-		if catInfo.AC_catCount ~= nil and catInfo.AC_catCount ~= 0 then
+		if catInfo.AC_catCount ~= nil then --and catInfo.AC_catCount ~= 0 then
 			local headerEntry = createHeaderEntry(catInfo)
 			table.insert(newScrollData, headerEntry)
 		end
@@ -443,7 +436,7 @@ local function prehookSort(self, inventoryType)
 			end
 		end
 	end	
-	-- end nogetrandom recommend
+	-- end nogetrandom recommend 
 
 	local list = zo_inventory.listView 
 	local scrollData = ZO_ScrollList_GetDataList(list) 

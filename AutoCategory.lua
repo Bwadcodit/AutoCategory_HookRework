@@ -261,13 +261,15 @@ function AutoCategory.ResetCollapse(vars)
     end
 end
 
+-- Determine if the specified category of the particular bag is collapsed or not
 function AutoCategory.IsCategoryCollapsed(bagTypeId, categoryName)
 	if bagTypeId == nil or categoryName == nil then return false end
 	
 	saved.collapses[bagTypeId] = SF.safeTable(saved.collapses[bagTypeId])
-    saved.collapses[bagTypeId][categoryName] = SF.nilDefault(saved.collapses[bagTypeId][categoryName], false)
+	collapsetbl = saved.collapses[bagTypeId]
+    collapsetbl[categoryName] = SF.nilDefault(collapsetbl[categoryName], false)
 
-    return saved.collapses[bagTypeId][categoryName]
+    return collapsetbl[categoryName]
 end
 
 function AutoCategory.SetCategoryCollapsed(bagTypeId, categoryName, collapsed)
