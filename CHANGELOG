@@ -1,3 +1,13 @@
+[COLOR="DeepSkyBlue"]3.1.7(76)[/COLOR]:
+[LIST]
+[*] Fixed error message during handling of damaged rules.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.1.6(76)[/COLOR]:
+[LIST]
+[*] Repair a paste error in the French translations file.
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.1.5(75)[/COLOR]:
 [LIST]
 [*] New French translations for text in AutoCategory provided by XXXspartiateXXX. Note that you may need to delete your saved variables for AutoCategory in order for the new translations to be used inside your rules.
