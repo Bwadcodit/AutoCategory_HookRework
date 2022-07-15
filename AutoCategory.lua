@@ -71,8 +71,8 @@ end
 -- or an error string returned from the compile
 --
 function AutoCategory.CompileRule(rule)
-    local logger = LibDebugLogger("AutoCategory")
-    logger:SetEnabled(true)
+    --local logger = LibDebugLogger("AutoCategory")
+    --logger:SetEnabled(true)
     if rule == nil then
         return
     end
@@ -86,7 +86,7 @@ function AutoCategory.CompileRule(rule)
 	if rule.rule == nil or rule.rule == "" then
 		rule.err = "Missing rule definition"
 		rule.damaged = true
-         logger:SetEnabled(false)
+        --logger:SetEnabled(false)
         return err
 	end
 	
@@ -94,12 +94,12 @@ function AutoCategory.CompileRule(rule)
     local compiledfunc, err = zo_loadstring(rulestr)
     if not compiledfunc then
         rule.damaged = true
-		AC.compiledRules[name] = nil
+		AC.compiledRules[rule.name] = nil
 		rule.err = err
-        logger:SetEnabled(false)
+        --logger:SetEnabled(false)
         return err
     end
-    logger:SetEnabled(false)
+    --logger:SetEnabled(false)
     AC.compiledRules[rule.name] = compiledfunc
     return ""
 end
@@ -115,14 +115,14 @@ function AutoCategory.RecompileRules(ruleset)
 	end
 	
     if ruleset == nil then
-		logger:SetEnabled(false)
+		--logger:SetEnabled(false)
         return
     end
     local compiled = AutoCategory.compiledRules
     for j = 1, #ruleset do
         if ruleset[j] then
             local r = ruleset[j]
-            local n = r.name
+            --local n = r.name
 			AutoCategory.CompileRule(r)
         end
     end
