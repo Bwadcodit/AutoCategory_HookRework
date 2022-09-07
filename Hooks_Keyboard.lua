@@ -259,6 +259,20 @@ local function runRulesOnEntry(itemEntry, specialType)
 	
 	local matched, categoryName, categoryPriority, bagTypeId, isHidden 
 				= AutoCategory:MatchCategoryRules(bagId, slotIndex, specialType)
+
+	if (bagId ~= AutoCategory.checkingItemBagId) or (slotIndex ~= AutoCategory.checkingItemSlotIndex) then --- Weird bug: sometimes AutoCategory.checkingItemSlotIndex reset to 0 during rules matching and thus the result is invalid
+		local itemLink1 = GetItemLink(bagId, slotIndex)
+		local itemLink2 = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+		d("[AUTO-CAT] MATCHING BUG: "..itemLink1.."("..tostring(bagId).."-"..tostring(slotIndex)..") --> "..itemLink2.."("..tostring(AutoCategory.checkingItemBagId).."-"..tostring(AutoCategory.checkingItemSlotIndex)..")")
+		matched, categoryName, categoryPriority, bagTypeId, isHidden = AutoCategory:MatchCategoryRules(itemEntry.data.bagId, itemEntry.data.slotIndex, specialType)
+		if (bagId ~= AutoCategory.checkingItemBagId) or (slotIndex ~= AutoCategory.checkingItemSlotIndex) then
+			local itemLink1 = GetItemLink(bagId, slotIndex)
+			local itemLink2 = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+			d("[AUTO-CAT] MATCHING BUG 2: "..itemLink1.."("..tostring(bagId).."-"..tostring(slotIndex)..") --> "..itemLink2.."("..tostring(AutoCategory.checkingItemBagId).."-"..tostring(AutoCategory.checkingItemSlotIndex)..")")
+		end
+	end
+
+
 	data.AC_matched = matched
 	if matched then
 		data.AC_categoryName = categoryName
