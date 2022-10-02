@@ -52,7 +52,7 @@ local function needsReloadTweak(needsReload)
 		bulkReloadTweak = false
 		return true
 	else
-		return needsReload
+		return false
 	end
 end
 
