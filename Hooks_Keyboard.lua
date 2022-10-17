@@ -365,11 +365,11 @@ local function detectItemChanges(itemEntry, newEntryHash, needReload)
 		return setChange(true)
 	end
 
-	--- Test last update time, triggers update if more than 2s
+	--- Test last update time, triggers update if more than 4s
 	if data.AC_lastUpdateTime == nil then
 		return setChange(true)
 		
-	elseif currentTime - tonumber(data.AC_lastUpdateTime) > 2 then
+	elseif currentTime - tonumber(data.AC_lastUpdateTime) > 4 then
 		return setChange(true)
 	end
 
