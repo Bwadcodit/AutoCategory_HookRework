@@ -1,3 +1,8 @@
+[COLOR="DeepSkyBlue"]3.2.2(80)[/COLOR]:
+[LIST]
+[*] API bump for Firesong.
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.2.1(79)[/COLOR]:
 [LIST]
 [*] Remove debug print statement that was accidentally left behind.
