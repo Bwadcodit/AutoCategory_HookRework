@@ -11,37 +11,65 @@ local cache = AutoCategory.cache
 local saved = AutoCategory.saved
 
 --cache data for dropdown: 
-cache.bags.showNames = { [AC_BAG_TYPE_BACKPACK] = L(SI_AC_BAGTYPE_SHOWNAME_BACKPACK), 
-						[AC_BAG_TYPE_BANK] = L(SI_AC_BAGTYPE_SHOWNAME_BANK),
-						[AC_BAG_TYPE_GUILDBANK] = L(SI_AC_BAGTYPE_SHOWNAME_GUILDBANK),
-						[AC_BAG_TYPE_CRAFTBAG] = L(SI_AC_BAGTYPE_SHOWNAME_CRAFTBAG),
-						[AC_BAG_TYPE_CRAFTSTATION] = L(SI_AC_BAGTYPE_SHOWNAME_CRAFTSTATION), 
-						[AC_BAG_TYPE_HOUSEBANK] = L(SI_AC_BAGTYPE_SHOWNAME_HOUSEBANK),
-						}
-cache.bags.values = {	AC_BAG_TYPE_BACKPACK, 
-						AC_BAG_TYPE_BANK, 
-						AC_BAG_TYPE_GUILDBANK, 
-						AC_BAG_TYPE_CRAFTBAG, 
-						AC_BAG_TYPE_CRAFTSTATION,
-						AC_BAG_TYPE_HOUSEBANK,
-						}
-cache.bags.tooltips = {  L(SI_AC_BAGTYPE_TOOLTIP_BACKPACK), 
-						L(SI_AC_BAGTYPE_TOOLTIP_BANK),
-						L(SI_AC_BAGTYPE_TOOLTIP_GUILDBANK),
-						L(SI_AC_BAGTYPE_TOOLTIP_CRAFTBAG),
-						L(SI_AC_BAGTYPE_TOOLTIP_CRAFTSTATION),
-						L(SI_AC_BAGTYPE_TOOLTIP_HOUSEBANK),
-						}
+cache.bags.showNames = { 
+	[AC_BAG_TYPE_BACKPACK] = L(SI_AC_BAGTYPE_SHOWNAME_BACKPACK), 
+	[AC_BAG_TYPE_BANK] = L(SI_AC_BAGTYPE_SHOWNAME_BANK),
+	[AC_BAG_TYPE_GUILDBANK] = L(SI_AC_BAGTYPE_SHOWNAME_GUILDBANK),
+	[AC_BAG_TYPE_CRAFTBAG] = L(SI_AC_BAGTYPE_SHOWNAME_CRAFTBAG),
+	[AC_BAG_TYPE_CRAFTSTATION] = L(SI_AC_BAGTYPE_SHOWNAME_CRAFTSTATION), 
+	[AC_BAG_TYPE_HOUSEBANK] = L(SI_AC_BAGTYPE_SHOWNAME_HOUSEBANK),
+}
+cache.bags.values = {	
+	AC_BAG_TYPE_BACKPACK, 
+	AC_BAG_TYPE_BANK, 
+	AC_BAG_TYPE_GUILDBANK, 
+	AC_BAG_TYPE_CRAFTBAG, 
+	AC_BAG_TYPE_CRAFTSTATION,
+	AC_BAG_TYPE_HOUSEBANK,
+}
+cache.bags.tooltips = {  
+	L(SI_AC_BAGTYPE_TOOLTIP_BACKPACK), 
+	L(SI_AC_BAGTYPE_TOOLTIP_BANK),
+	L(SI_AC_BAGTYPE_TOOLTIP_GUILDBANK),
+	L(SI_AC_BAGTYPE_TOOLTIP_CRAFTBAG),
+	L(SI_AC_BAGTYPE_TOOLTIP_CRAFTSTATION),
+	L(SI_AC_BAGTYPE_TOOLTIP_HOUSEBANK),
+}
 
 local fieldData = {
-	editBag = {indexValue = AC_BAG_TYPE_BACKPACK, choices = {}, choicesValues = {}, choicesTooltips = {}},
-	editBagRule = {indexValue = "", choices = {}, choicesValues = {}, choicesTooltips = {}},
-	addCatTag = {indexValue = "", choices = {}, choicesValues = {}, choicesTooltips = {}},
-	addCatRule = {indexValue = "", choices = {}, choicesValues = {}, choicesTooltips = {}},
-	editRuleTag = {indexValue = "", choices = {}, choicesValues = {}, choicesTooltips = {}},
-	editRuleCat = {indexValue = "", choices = {}, choicesValues = {}, choicesTooltips = {}},
-	importBag = {indexValue = AC_BAG_TYPE_BACKPACK, choices = {}, choicesValues = {}, choicesTooltips = {}},
-    currentRule = { name = "", description = "", rule = "false", tag = "", },
+	editBag = {
+		indexValue = AC_BAG_TYPE_BACKPACK, 
+		choices = {}, choicesValues = {}, choicesTooltips = {}
+	},
+	editBagRule = {
+		indexValue = "", 
+		choices = {}, choicesValues = {}, choicesTooltips = {}
+	},
+	addCatTag = {
+		indexValue = "", 
+		choices = {}, choicesValues = {}, choicesTooltips = {}
+	},
+	addCatRule = {
+		indexValue = "", 
+		choices = {}, choicesValues = {}, choicesTooltips = {}
+	},
+	editRuleTag = {
+		indexValue = "", 
+		choices = {}, choicesValues = {}, choicesTooltips = {}
+	},
+	editRuleCat = {
+		indexValue = "", 
+		choices = {}, choicesValues = {}, choicesTooltips = {}
+	},
+	importBag = {
+		indexValue = AC_BAG_TYPE_BACKPACK, 
+		choices = {}, choicesValues = {}, choicesTooltips = {}
+	},
+    currentRule = { 
+		name = "", 
+		description = "", 
+		rule = "false", 
+		tag = "", },
 }
 
 -- It is the responsiblity of the caller to pass in a non-duplicated entry
@@ -70,9 +98,15 @@ local function AddChoice( dataArray, choice, value, tooltip )
     end
 end
 
-local dropdownFontStyle	= {'none', 'outline', 'thin-outline', 'thick-outline', 'shadow', 'soft-shadow-thin', 'soft-shadow-thick'}
+local dropdownFontStyle	= {
+	'none', 'outline', 'thin-outline', 'thick-outline', 'shadow', 'soft-shadow-thin', 'soft-shadow-thick'
+}
 local dropdownFontAlignment = {}
-dropdownFontAlignment.showNames = {L(SI_AC_ALIGNMENT_LEFT), L(SI_AC_ALIGNMENT_CENTER), L(SI_AC_ALIGNMENT_RIGHT)}
+dropdownFontAlignment.showNames = {
+	L(SI_AC_ALIGNMENT_LEFT), 
+	L(SI_AC_ALIGNMENT_CENTER), 
+	L(SI_AC_ALIGNMENT_RIGHT)
+}
 dropdownFontAlignment.values = {0, 1, 2} 
 
 local ruleCheckStatus = {}
@@ -172,10 +206,11 @@ local function RefreshPanel()
 	warningDuplicatedName.warningMessage = nil	
 end 
 
+--[[
 local function RuleDataSortingFunction(a, b)
 	local result = false
 	if a.tag ~= b.tag then
-		result = a.tag <b.tag
+		result = a.tag < b.tag
 	else
 		--alphabetical sort, cannot have same name rules
 		result = a.name < b.name
@@ -193,6 +228,7 @@ local function BagDataSortingFunction(a, b)
 	end
 	return result
 end 
+--]]
 
 local function ToggleSubmenu(typeString, open)
 	local control = WINDOW_MANAGER:GetControlByName(typeString, "")
@@ -212,7 +248,8 @@ local function UpdateChoices(name, data)
         --d("UpdateChoices: bad control "..name)
         return
     end
-	dropdownCtrl:UpdateChoices(data.choices, data.choicesValues, data.choicesTooltips)  
+	dropdownCtrl:UpdateChoices(data.choices, data.choicesValues, 
+		data.choicesTooltips)  
 end
 
 local function RefreshDropdownData()
@@ -231,7 +268,9 @@ local function RefreshDropdownData()
 	end
 
 	--refresh current dropdown rules
-	local dataCurrentRules_EditRule = {showNames = {}, values = {}, tooltips = {}, }
+	local dataCurrentRules_EditRule = {
+		showNames = {}, values = {}, tooltips = {}, 
+	}
     local ltag = fieldData.editRuleTag.indexValue
 	if ltag and cache.rulesByTag[ltag] then 
 		dataCurrentRules_EditRule.showNames = cache.rulesByTag[ltag].showNames
@@ -278,7 +317,8 @@ local function RefreshDropdownData()
 	fieldData.addCatRule.choices = dataCurrentRules_AddCategory.choices
 	fieldData.addCatRule.choicesValues = dataCurrentRules_AddCategory.choicesValues
 	fieldData.addCatRule.choicesTooltips = dataCurrentRules_AddCategory.choicesTooltips
-	if fieldData.addCatRule.indexValue == "" and #dataCurrentRules_AddCategory.choicesValues > 0 then
+	if fieldData.addCatRule.indexValue == "" 
+			and #dataCurrentRules_AddCategory.choicesValues > 0 then
 		fieldData.addCatRule.indexValue = dataCurrentRules_AddCategory.choicesValues[1]
 	end
     UpdateChoices("AC_DROPDOWN_ADDCATEGORY_RULE", fieldData.addCatRule)
@@ -1172,16 +1212,23 @@ function AutoCategory.AddonMenuInit()
                 {
                     type = "checkbox",
                     name = SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_ITEM_COUNT,
-                    tooltip = SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_ITEM_COUNT_TOOLTIP,
-                    getFunc = function() return saved.general["SHOW_CATEGORY_ITEM_COUNT"] end,
-                    setFunc = function(value) saved.general["SHOW_CATEGORY_ITEM_COUNT"] = value end,
+                    tooltip = 
+						SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_ITEM_COUNT_TOOLTIP,
+                    getFunc = function() 
+						return saved.general["SHOW_CATEGORY_ITEM_COUNT"] 
+						end,
+                    setFunc = function(value) 
+						saved.general["SHOW_CATEGORY_ITEM_COUNT"] = value 
+						end,
                 },
                 -- Show category collapse icon
                 {
                     type = "checkbox",
                     name = SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_COLLAPSE_ICON,
                     tooltip = SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_COLLAPSE_ICON_TOOLTIP,
-                    getFunc = function() return saved.general["SHOW_CATEGORY_COLLAPSE_ICON"] end,
+                    getFunc = function() 
+						return saved.general["SHOW_CATEGORY_COLLAPSE_ICON"] 
+						end,
                     setFunc = function(value) 
                     	saved.general["SHOW_CATEGORY_COLLAPSE_ICON"] = value 
                     	AutoCategory.RefreshCurrentList(true)

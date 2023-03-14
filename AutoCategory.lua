@@ -28,12 +28,12 @@ local cache = AutoCategory.cache
 
 local AC_EMPTY_TAG_NAME = L(SI_AC_DEFAULT_NAME_EMPTY_TAG)
 
-
+--[[
 local function getCategoryName()
     local cateName = header.slot.dataEntry.data.AC_categoryName
 	return cateName
 end
-
+--]]
 local function getBagTypeId(header)
 	SF.dTable(header,5,"getBagTypeId - header")
 	local bagTypeId = header.slot.dataEntry.data.AC_bagTypeId
@@ -197,7 +197,7 @@ end
 
 function AutoCategory.BagRuleEntry.formatValue(entry)
     return entry.name
-    --return string.format("(%03d) %s", entry.priority, entry.name )
+    --return string.format("(%04d) %s", entry.priority, entry.name )
 end
 
 function AutoCategory.BagRuleEntry.formatShow(entry, rule)
@@ -350,13 +350,14 @@ function AutoCategory.cacheInitialize()
     ZO_ClearTable(cache.entriesByBag)
     -- load in the bagged rules (sorted by priority high-to-low)
     for bagId = 1, #saved.bags do
-        cache.entriesByBag[bagId] = cache.entriesByBag[bagId] or {showNames = {}, values = {}, tooltips = {}}
+        cache.entriesByBag[bagId] = cache.entriesByBag[bagId] 
+				or {showNames = {}, values = {}, tooltips = {}}
         local ebag = cache.entriesByBag[bagId]
 
         cache.entriesByName[bagId] = cache.entriesByName[bagId] or {}
         local ename = cache.entriesByName[bagId]
 
-        local ibag = saved.bags[bagId] or {}
+        local ibag = saved.bags[bagId] or {rules={}}
         table.sort(ibag.rules, BagDataSortingFunction)
         for entry = 1, #ibag.rules do
             local data = ibag.rules[entry] -- data equals {name, priority}
