@@ -128,48 +128,119 @@ function AutoCategory_MiscAddons.RuleFunc.GetAmountTTC( ... )
 end
 
 -- Implement alphagear() check function for Alpha Gear
-function AutoCategory_MiscAddons.RuleFunc.AlphaGear( ... ) 
-	if not (AG ) then
+function AutoCategory_MiscAddons.RuleFunc.AlphaGear( ... )
+	if not AG or not AG.setdata or not AG.setdata.profiles then
 		return false
 	end
+	local _, _, _, _, _, equipType = GetItemInfo(AC.checkingItemBagId, AC.checkingItemSlotIndex)
+	if equipType == EQUIP_TYPE_INVALID then return end -- The item is not gear (nor poison)
+
+	local strat_profile = 0 --- 0: no profile name / 1: profile name if item included in a build / 2: profile name if item included in a gear row
+	local strat_build = 0 --- 0: no build name / 1: build name if in active profile / 2: build name if any
+	local strat_activePrio = 0 --- 0: regular priority, rely on profile sort keys and build numbers / 1: the active profile has priority
+	local strat_others = 0 --- 0: The rule return true only if a build/profile name was found according to strategies / 1: The rule return true if the item was found anywhere, and use 'Others' as default additional category name
+
 	local fn = "alphagear"
 	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
+	-- if ac == 0 then
+	-- 	error( string.format("error: %s(): require arguments." , fn))
+	-- end
+	for ax = 1, ac do -- store parameters in profileSortKeysList
+		local arg = select( ax, ... )
+		local numArg = tonumber(arg)
+		if numArg then
+			if ax == 1 then strat_profile = numArg
+			elseif ax == 2 then strat_build = numArg
+			elseif ax == 3 then strat_activePrio = numArg
+			elseif ax == 4 then strat_others = numArg
+			end
+			if strat_build == 1 then strat_activePrio = 1 end -- build name if in active profile requires/implies active profile priority
+		end
 	end
-	
+
 	local uid = Id64ToString(GetItemUniqueId(AC.checkingItemBagId, AC.checkingItemSlotIndex))
 	if not uid then return false end
 
-	for ax = 1, ac do 
-		local arg = select( ax, ... )
-		local comIndex = -1
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		if type( arg ) == "number" then
-			comIndex = arg
-			
-		elseif type( arg ) == "string" then
-			comIndex = tonumber(arg)
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		
-		local nr = comIndex
-		if AG.setdata[nr].Set.gear > 0 then
-			for slot = 1,14 do
-				if AG.setdata[AG.setdata[nr].Set.gear].Gear[slot].id == uid then
-					local setName = AG.setdata[nr].Set.text[1]
-					AutoCategory.AdditionCategoryName = setName
-					return true
-				end
+	--- Retrieve all profile sort keys and sort them. Ignore empty sort key.
+	local profileSortKeysList  = {}
+	for profileId, profile in ipairs(AG.setdata.profiles) do
+		if profile and profile.setdata then
+			local profileSortKey = profile.sortKey
+			if profileSortKey and profileSortKey ~= "" then
+				table.insert(profileSortKeysList, profileSortKey)
 			end
-		end 
+		end
 	end
-	
-	return false 
+	table.sort(profileSortKeysList)
+	--- Retrieve all profile IDs in order, the active profile ID is put to the top of the list if strat_activePrio is set to 1.
+	local profileIDList = {}
+	for _, profileSortKey in ipairs(profileSortKeysList) do
+		for profileId, profile in ipairs(AG.setdata.profiles) do
+			if strat_activePrio == 1 and AG.setdata.currentProfileId == profileId then
+				table.insert(profileIDList, 1, profileId)
+			elseif profile and profile.sortKey == profileSortKey then
+				table.insert(profileIDList, profileId)
+			end
+		end
+	end
+	--- Retrieve the first profile containing the item in any gear row.
+	local targetProfileName, targetBuildName
+	local isTargetProfileActive = false
+	local function testBreak() return targetBuildName or (strat_profile == 2 and strat_build == 0 and targetProfileName) end --- always look for a profile containing the item in a build in priority, except if builds are ignored in strategy (strat_profile == 2 and strat_build == 0)
+	for _, profileId in ipairs(profileIDList) do
+		local profile = AG.setdata.profiles[profileId]
+		if profile and profile.setdata then
+			for setDataRow, setData in ipairs(profile.setdata) do
+				if setData and setData.Gear then
+					for _, itemData in ipairs(setData.Gear) do
+						if itemData and itemData.id and itemData.id == uid then
+							if not targetProfileName then -- update only if no profile were found (keep priority)
+								targetProfileName = profile.name
+								if not targetProfileName or (targetProfileName == "") then targetProfileName = "Profile "..tostring(profileId) end
+								isTargetProfileActive = (AG.setdata.currentProfileId == profileId)
+							end
+							--- Retrieve the first build containing the item, continue with other profiles if none found
+							for setDataRow2, setdata2 in ipairs(profile.setdata) do
+								if setdata2 and setdata2.Set and setdata2.Set.gear and setdata2.Set.gear == setDataRow then
+									targetProfileName = profile.name
+									if not targetProfileName or (targetProfileName == "") then targetProfileName = "Profile "..tostring(profileId) end
+									isTargetProfileActive = (AG.setdata.currentProfileId == profileId)
+									targetBuildName = setdata2.Set.text[1]
+									if not targetBuildName or (targetBuildName == "") then targetBuildName = "Build "..tostring(setDataRow2) end
+									break
+								end
+							end
+							if testBreak() then break end
+						end
+					end
+				end
+				if testBreak() then break end
+			end
+		end
+		if testBreak() then break end
+	end
+	if not targetProfileName then return false end --- Item not found, exit
+	--- Compute category name depending on strategies
+	if strat_profile == 2 or (strat_profile == 1 and targetBuildName) then
+		if (strat_build == 2 or (strat_build == 1 and isTargetProfileActive)) and targetBuildName then   -- use profile and build names
+			AC.AdditionCategoryName = targetProfileName.." - ".. targetBuildName
+		else  -- use profile name only
+			AC.AdditionCategoryName = targetProfileName
+		end
+	elseif (strat_build == 2 or (strat_build == 1 and isTargetProfileActive)) and targetBuildName then -- use build name only
+		AC.AdditionCategoryName = targetBuildName
+	end
+
+	if AC.AdditionCategoryName and AC.AdditionCategoryName ~= "" then
+		return true
+	elseif strat_others == 1 then
+		AC.AdditionCategoryName = "Others"
+		return true
+	elseif strat_profile == 0 and strat_build == 0 and strat_others == 0 then --- Group all matching items in one category if strategy is to ignore everything
+		AC.AdditionCategoryName = ""
+		return true
+	end
+	return false
 end
 
 -- Implement istracked() check function for Set Tracker
