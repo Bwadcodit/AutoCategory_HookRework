@@ -1,3 +1,15 @@
+[COLOR="DeepSkyBlue"]3.3(82)[/COLOR]:
+[LIST]
+[*] Changed functions [COLOR="MediumSeaGreen"]ck_isunknown()[/COLOR] to work for characters in all accounts on the same computer for the current ESO server (NA, Europe, etc.). The [COLOR="MediumSeaGreen"]ck_isunknown()[/COLOR] and [COLOR="MediumSeaGreen"]ck_isunknowncat()[/COLOR] functions require you to have installed the [COLOR="DarkOrange"]LibCharacterKnowledge[/COLOR] addon by @code65536.
+[*] Increased the available range of priority numbers for rules to 1-1000. This does not change the already assigned rule priorities, but you now have room to spread out your rules. Just note that if you have hundreds of rules, your inventory/bank access will be SLOW!
+[/LIST]
+Added alternate names for several addon integration commands. Both the old and new commands are available and the new commands take the same parameters as the old ones:
+[LIST]
+* Old command [COLOR="MediumSeaGreen"]getpricemm()[/COLOR] - alternate command [COLOR="MediumSeaGreen"]mm_getprice()[/COLOR] - integration with MasterMerchant
+* Old command [COLOR="MediumSeaGreen"]getpricettc()[/COLOR] - alternate command [COLOR="MediumSeaGreen"]ttc_getprice()[/COLOR] - integration with Tamriel Trade Centre
+* Old command [COLOR="MediumSeaGreen"]getamountttc()[/COLOR] - alternate command [COLOR="MediumSeaGreen"]ttc_getamount()[/COLOR] - integration with Tamriel Trade Centre
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.2.3(81)[/COLOR]:
 [LIST]
 [*] API bump for Scribes of Fate.

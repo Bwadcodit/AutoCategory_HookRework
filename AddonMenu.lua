@@ -115,9 +115,11 @@ function ruleCheckStatus.getTitle()
     if ruleCheckStatus.err == nil then
         if ruleCheckStatus.good == nil then
             return ""
+			
         else
             return L(SI_AC_MENU_EC_BUTTON_CHECK_RESULT_GOOD)
         end
+		
     else
         if not fieldData.currentRule.damaged then
             return L(SI_AC_MENU_EC_BUTTON_CHECK_RESULT_WARNING)
@@ -129,6 +131,7 @@ end
 function ruleCheckStatus.getText()
     if ruleCheckStatus.err == nil then
         return ""
+		
     else
         return ruleCheckStatus.err
     end
@@ -140,6 +143,7 @@ local function checkKeywords(str)
         local found = false
         if AC.Environment[w] then
             found = true
+			
         else
             for i=1, #AC.dictionary do
                 if AC.dictionary[i][w] then
@@ -175,11 +179,13 @@ local function checkCurrentRule()
         ruleCheckStatus.err = err
         fieldData.currentRule.damaged = true 
 		fieldData.currentRule.err = err
+		
     else
         local errt = checkKeywords(fieldData.currentRule.rule)
         if #errt == 0 then
             ruleCheckStatus.good = true
             fieldData.currentRule.damaged = nil
+			
         else
             ruleCheckStatus.err = table.concat(errt,", ")
             fieldData.currentRule.damaged = nil 
@@ -211,6 +217,7 @@ local function RuleDataSortingFunction(a, b)
 	local result = false
 	if a.tag ~= b.tag then
 		result = a.tag < b.tag
+		
 	else
 		--alphabetical sort, cannot have same name rules
 		result = a.name < b.name
@@ -223,6 +230,7 @@ local function BagDataSortingFunction(a, b)
 	local result = false
 	if a.priority ~= b.priority then
 		result = a.priority > b.priority
+		
 	else
 		result = a.name < b.name
 	end
@@ -236,6 +244,7 @@ local function ToggleSubmenu(typeString, open)
 		control.open = open
 		if control.open then
 			control.animation:PlayFromStart()
+			
 		else
 			control.animation:PlayFromEnd()
 		end	
@@ -344,9 +353,11 @@ local function RemoveDropDownItem(dataArray, removeItem, emptyCallback)
 		if emptyCallback then
 			emptyCallback(dataArray)
 		end
+		
 	elseif removeIndex == num then
 		--no next one, select previous one
 		dataArray.indexValue = dataArray.choicesValues[num-1]
+		
 	else
 		--select next one
 		dataArray.indexValue = dataArray.choicesValues[removeIndex]
@@ -382,12 +393,13 @@ end
 local function CreateNewBagRuleEntry(name)
 	local entry = {
 		name = name,
-		priority = 100,
+		priority = 1000,
 	}
 	return entry	
 end
 
 -- replaced by AutoCategory.cache.RemoveRuleFromBag(bagId, name)???
+--[[
 local function RemoveRuleFromBag(ruleName, bagId)
 	for i = 1, #saved.bags[bagId].rules do
 		local rule = saved.bags[bagId].rules[i]
@@ -398,6 +410,7 @@ local function RemoveRuleFromBag(ruleName, bagId)
 	end
 	return -1
 end
+--]]
 
 -- -------------------------------------------------
 function AutoCategory.AddonMenuInit()
@@ -559,7 +572,7 @@ function AutoCategory.AddonMenuInit()
 					name = SI_AC_MENU_BS_SLIDER_CATEGORY_PRIORITY,
 					tooltip = SI_AC_MENU_BS_SLIDER_CATEGORY_PRIORITY_TOOLTIP,
 					min = 0,
-					max = 100,
+					max = 1000,
 					getFunc = function() 
 						local bag = fieldData.editBag.indexValue
 						local rule = fieldData.editBagRule.indexValue
@@ -1163,6 +1176,7 @@ function AutoCategory.AddonMenuInit()
                         if ruleCheckStatus.err == "" then
                             ruleCheckStatus.err = nil
                             ruleCheckStatus.good = true
+							
                         else
                             ruleCheckStatus.good = nil
                         end

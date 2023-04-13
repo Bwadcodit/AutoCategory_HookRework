@@ -145,6 +145,7 @@ local function RuleDataSortingFunction(a, b)
     local result = false
     if a.tag ~= b.tag then
         result = a.tag < b.tag
+		
     else
         --alphabetical sort, cannot have same name rules
         result = a.name < b.name
@@ -157,12 +158,14 @@ end
 -- returns true if the a should come before b
 local function BagDataSortingFunction(a, b)
     local result = false
-    if not a or not b or not a.name or not b.name then
-        return false
-    end
+	if a == nil and b ~= nil then return false end
+	if b == nil then return true end
     if a.priority ~= b.priority then
         result = a.priority > b.priority
+		
     else
+		if a.name == nil then return false end
+		if b.name == nil then return true end
         result = a.name < b.name
     end
     return result
@@ -180,6 +183,7 @@ function AutoCategory.UpdateCurrentSavedVars()
     if not AutoCategory.charSaved.accountWide then
         saved.bags = AutoCategory.charSaved.bags
         saved.collapses = AutoCategory.charSaved.collapses
+		
     else
         saved.bags = AutoCategory.acctSaved.bags
         saved.collapses = AutoCategory.acctSaved.collapses
@@ -205,9 +209,11 @@ function AutoCategory.BagRuleEntry.formatShow(entry, rule)
     if not rule then
         -- missing rule (nil was passed in)
         sn = string.format("|cFF4444(!)|r %s (%d)", entry.name, entry.priority)
+		
     else
         if entry.AC_isHidden then
             sn = string.format("|c626250%s (%d)|r", entry.name, entry.priority)
+			
         else
             sn = string.format("%s (%d)", entry.name, entry.priority)
         end
@@ -220,6 +226,7 @@ function AutoCategory.BagRuleEntry.formatTooltip(rule)
     if not rule then
         -- missing rule (nil was passed in)
         tt = L(SI_AC_WARNING_CATEGORY_MISSING)
+		
     else
         tt = rule.description
         if not tt or tt == "" then
@@ -232,7 +239,7 @@ end
 -- --------------------------------------------
 -- Create a new Bag Entry
 -- Rulename parameter is required, priority is optional.
--- If a priority is not provided, default to 100
+-- If a priority is not provided, default to 1000
 -- Returns a table {name=, priority=} or nil
 --
 function AutoCategory.BagRuleEntry.createNew(rulename, priority)
@@ -241,7 +248,7 @@ function AutoCategory.BagRuleEntry.createNew(rulename, priority)
     end
 
     if priority == nil then
-        priority = 100
+        priority = 1000
     end
     return {name = rulename, priority = priority}
 end
@@ -280,6 +287,7 @@ end
 function AutoCategory.ResetToDefaults()
     if AutoCategory.acctSaved.rules then
         ZO_ClearTable(AutoCategory.acctSaved.rules)
+		
     else
         AutoCategory.acctSaved.rules = {}
     end
@@ -287,6 +295,7 @@ function AutoCategory.ResetToDefaults()
 
     if AutoCategory.acctSaved.bags then
         ZO_ClearTable(AutoCategory.acctSaved.bags)
+		
     else
         AutoCategory.acctSaved.bags = {}
     end
@@ -294,6 +303,7 @@ function AutoCategory.ResetToDefaults()
 
     if AutoCategory.acctSaved.appearance then
         ZO_ClearTable(AutoCategory.acctSaved.appearance)
+		
     else
         AutoCategory.acctSaved.appearance = {}
     end
@@ -301,6 +311,7 @@ function AutoCategory.ResetToDefaults()
 
     if AutoCategory.charSaved.bags then
         ZO_ClearTable(AutoCategory.charSaved.bags)
+		
     else
         AutoCategory.charSaved.bags = {}
     end
@@ -498,6 +509,7 @@ function AutoCategory.cache.AddRule(rule)
 		-- rule already exists
 		saved.rules[rule_ndx] = rule
         --return "AddRule: Rule (" .. rule.name .. ") already exists. Ignoring"
+		
 	else
 		-- add the new rule
 		table.insert(saved.rules, rule)
@@ -546,6 +558,7 @@ function AutoCategory.removeDuplicatedRules()
                 --remove duplicated category
                 --d("removed (" .. j .. ") " .. data.name)
                 table.remove(saved.bags[i].rules, j)
+				
             else
                 --flag this category
                 keys[data.name] = true
@@ -600,6 +613,7 @@ function AutoCategory.onLoad(event, addon)
             if not AC.acctSaved.bags[k].rules or #AC.acctSaved.bags[k].rules == 0 then
                 AC.acctSaved.bags[k] = v
             end
+			
         else
             AC.acctSaved.bags[k] = v
         end
@@ -727,9 +741,11 @@ function AC_ItemRowHeader_OnMouseEnter(header)
         markerBG:SetHidden(false)
         if collapsed then
             markerBG:SetTexture("EsoUI/Art/Buttons/plus_over.dds")
+			
         else
             markerBG:SetTexture("EsoUI/Art/Buttons/minus_over.dds")
         end
+		
     else
         markerBG:SetHidden(true)
     end
@@ -767,6 +783,7 @@ function AC_ItemRowHeader_OnShowContextMenu(header)
                 AutoCategory.RefreshCurrentList()
             end
         )
+		
     else
         AddMenuItem(
             L(SI_CONTEXT_MENU_COLLAPSE),
@@ -802,6 +819,7 @@ function AC_Binding_ToggleCategorize()
     if AutoCategory.acctSaved.general["SHOW_MESSAGE_WHEN_TOGGLE"] then
         if AutoCategory.Enabled then
             d(L(SI_MESSAGE_TOGGLE_AUTO_CATEGORY_ON))
+			
         else
             d(L(SI_MESSAGE_TOGGLE_AUTO_CATEGORY_OFF))
         end
