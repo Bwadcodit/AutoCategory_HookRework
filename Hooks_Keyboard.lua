@@ -22,6 +22,43 @@ In order to reduce the impact of the add-on:
 			- The event EVENT_STACKED_ALL_ITEMS_IN_BAG is used so re-execution of rules with inventory refresh can be triggered manually by stacking all items.
 ]]
 
+local stackItemsTweak = false
+local bulkReloadTweak = false
+
+local function clearNewTweak(scrollData)
+	 -- TWEAK: remove all new flags if stacking all items
+	if stackItemsTweak then
+		stackItemsTweak = false
+		for _, itemEntry in ipairs(scrollData) do
+			if itemEntry.typeId ~= CATEGORY_HEADER and itemEntry.data.brandNew then
+				itemEntry.data.clearAgeOnClose = nil -- code here comes from inventory.lua:1926
+				SHARED_INVENTORY:ClearNewStatus(itemEntry.data.bagId, itemEntry.data.slotIndex)
+				--ZO_SharedInventoryManager:ClearNewStatus(itemEntry.bagId, itemEntry.slotIndex)
+			end
+		end
+	end
+end
+
+local function bulkTweak(scene)
+	if scene == "guildBank" or scene == "bank" then
+		bulkReloadTweak = true
+		return true -- hard skip out
+	end
+	return false
+end
+
+local function needsReloadTweak(needsReload)
+	if bulkReloadTweak then
+		bulkReloadTweak = false
+		return true
+	else
+		return false
+	end
+end
+
+local function onStackItemsTweak()
+	stackItemsTweak = true
+end
 
 local LMP = LibMediaProvider
 local SF = LibSFUtils
@@ -222,6 +259,20 @@ local function runRulesOnEntry(itemEntry, specialType)
 	
 	local matched, categoryName, categoryPriority, bagTypeId, isHidden 
 				= AutoCategory:MatchCategoryRules(bagId, slotIndex, specialType)
+
+	if (bagId ~= AutoCategory.checkingItemBagId) or (slotIndex ~= AutoCategory.checkingItemSlotIndex) then --- Weird bug: sometimes AutoCategory.checkingItemSlotIndex reset to 0 during rules matching and thus the result is invalid
+		local itemLink1 = GetItemLink(bagId, slotIndex)
+		local itemLink2 = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+		-- d("[AUTO-CAT] MATCHING BUG: "..itemLink1.."("..tostring(bagId).."-"..tostring(slotIndex)..") --> "..itemLink2.."("..tostring(AutoCategory.checkingItemBagId).."-"..tostring(AutoCategory.checkingItemSlotIndex)..")")
+		matched, categoryName, categoryPriority, bagTypeId, isHidden = AutoCategory:MatchCategoryRules(itemEntry.data.bagId, itemEntry.data.slotIndex, specialType)
+		if (bagId ~= AutoCategory.checkingItemBagId) or (slotIndex ~= AutoCategory.checkingItemSlotIndex) then
+			local itemLink1 = GetItemLink(bagId, slotIndex)
+			local itemLink2 = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+			d("[AUTO-CAT] MATCHING BUG 2: "..itemLink1.."("..tostring(bagId).."-"..tostring(slotIndex)..") --> "..itemLink2.."("..tostring(AutoCategory.checkingItemBagId).."-"..tostring(AutoCategory.checkingItemSlotIndex)..")")
+		end
+	end
+
+
 	data.AC_matched = matched
 	if matched then
 		data.AC_categoryName = categoryName
@@ -314,11 +365,11 @@ local function detectItemChanges(itemEntry, newEntryHash, needReload)
 		return setChange(true)
 	end
 
-	--- Test last update time, triggers update if more than 2s
+	--- Test last update time, triggers update if more than 4s
 	if data.AC_lastUpdateTime == nil then
 		return setChange(true)
 		
-	elseif currentTime - tonumber(data.AC_lastUpdateTime) > 2 then
+	elseif currentTime - tonumber(data.AC_lastUpdateTime) > 4 then
 		return setChange(true)
 	end
 
@@ -479,6 +530,7 @@ local function prehookSort(self, inventoryType)
 	end
 	if scene then
 		if AutoCategory.BulkMode and AutoCategory.BulkMode == true then
+			if bulkTweak(scene) then return true end -- hard skip out
 			if scene == "guildBank" or (XLGearBanker and scene == "bank") then
 				return false	-- skip out early
 			end
@@ -490,11 +542,13 @@ local function prehookSort(self, inventoryType)
 	local scrollData = ZO_ScrollList_GetDataList(list) 
 	local bagId = getListBagID(scrollData)
 	
+	clearNewTweak(scrollData)
+
 	local needsReload = true
 	if scene == "bank" or scene == "guildBank" then
 		needsReload = false
 	end
-	handleRules(scrollData, needsReload) --> update rules' results if necessary
+	handleRules(scrollData, needsReloadTweak(needsReload)) --> update rules' results if necessary
 
 	
 	-- add header rows	   
@@ -540,6 +594,7 @@ local function onInventorySlotUpdated(self, bagId, slotIndex)
 end
 
 local function onStackItems(evtid, bagId)
+	onStackItemsTweak()
 	local invType = PLAYER_INVENTORY.bagToInventoryType[bagId]
 	AutoCategory.RefreshList(invType)
 end
@@ -579,8 +634,12 @@ function AutoCategory.HookKeyboardMode()
 	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, 
 			EVENT_STACKED_ALL_ITEMS_IN_BAG, onStackItems )
 
+	-- AlphaGear change detection hook
+	if AG then
+		ZO_PostHook(AG, "handlePostChangeGearSetItems", function() refresh(true) end)
+		ZO_PostHook(AG, "LoadProfile", function() refresh(true) end) -- can be called twice in a row...
+	end
 end
-
 
 --[[
 -------- HINTS FOR REFERENCE -----------
