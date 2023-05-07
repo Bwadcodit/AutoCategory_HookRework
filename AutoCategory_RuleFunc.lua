@@ -1324,6 +1324,14 @@ function AutoCategory.RuleFunc.AlphaGear( ... )
 	return false 
 end
 
+function AutoCategory.RuleFunc.CannotDecon(...)
+	local fn = "cannotdecon"
+	if AutoCategory.RuleFunc.IsCompanionOnly() then return true end
+	local itemLink = GetItemLink(AC.checkingItemBagId, AC.checkingItemSlotIndex)
+    return IsItemLinkForcedNotDeconstructable(itemLink)
+end
+
+
 function AutoCategory.RuleFunc.ArmoryBuild( ... )
 	local fn = "armorybuild"
 	local ac = select( '#', ... )
@@ -1375,8 +1383,10 @@ end
 -- returns true/false
 function AutoCategory.RuleFunc.IsInQuickslot( ... )
 	local fn = "isinquickslot"
-	local slotIndex = FindActionSlotMatchingItem(AC.checkingItemBagId, AC.checkingItemSlotIndex, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-	return slotIndex ~= nil
+	if AC.checkingItemBagId ~= BAG_BACKPACK then return false end
+	local actionslot = FindActionSlotMatchingItem(AC.checkingItemBagId, AC.checkingItemSlotIndex,HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+	if actionslot ~= nil then return true end
+	return false
 end
 
 -- Addon Integration - TamrielTradeCentre
@@ -1469,6 +1479,8 @@ function AutoCategory.RuleFunc.IsTracked( ... )
   -- not a set tracked by SetTrack
   return false  
 end
+
+ 
 
 -- code donated by Tonyleila
 -- returns true/false
@@ -1582,6 +1594,7 @@ AutoCategory.Environment = {
 	isstolen       = AutoCategory.RuleFunc.IsStolen,	
 	iscrafted      = AutoCategory.RuleFunc.IsCrafted,
 	islearnable    = AutoCategory.RuleFunc.IsLearnable,
+	cannotdecon    = AutoCategory.RuleFunc.CannotDecon,
 	
 	isset          = AutoCategory.RuleFunc.IsSet,
 	ismonsterset   = AutoCategory.RuleFunc.IsMonsterSet,

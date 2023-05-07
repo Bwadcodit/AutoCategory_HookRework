@@ -75,16 +75,12 @@ local fieldData = {
 -- It is the responsiblity of the caller to pass in a non-duplicated entry
 local function AddChoice( dataArray, choice, value, tooltip )
     -- value is only optional if we don't have a table to put it into
-    if value == nil then 
-        if dataArray.choicesValues then
-            return  -- bad value
-        end
+    if value == nil and dataArray.choicesValues then
+		return  -- bad value
     end
     -- tooltip is only optional if we don't have a table to put it into
-    if tooltip == nil then 
-        if dataArray.choicesTooltips then
-            return  -- bad tooltip
-        end
+    if tooltip == nil and dataArray.choicesTooltips then
+		return  -- bad tooltip
     end
     -- choice is mandatory
     if not choice then return end
@@ -209,8 +205,67 @@ local function RefreshPanel()
 	UpdateDuplicateNameWarning()
 
 	--restore warning
-	warningDuplicatedName.warningMessage = nil	
+	warningDuplicatedName.warningMessage = nil
+
 end 
+
+local doneOnce = false
+--	if doneOnce == false then
+--		doneOnce = AC.LengthenRuleBox()
+--	end
+
+function AutoCategory.LengthenRuleBox()
+	local lines = 10
+	if doneOnce then return true end
+	-- change lines
+	local MIN_HEIGHT = 24
+	local control = WINDOW_MANAGER:GetControlByName("AC_EDITBOX_EDITRULE_RULE", "")
+	if control == nil or control.container == nil then return false end
+	
+	doneOnce = true
+    local container = control.container
+	local editbox = control.editbox
+	
+	container:SetHeight(MIN_HEIGHT * lines)
+    control:SetHeight((MIN_HEIGHT * lines) + control.label:GetHeight())
+
+	return true
+--[[
+    local MIN_WIDTH = (parent.GetWidth and (parent:GetWidth() / 10)) or (parent.panel.GetWidth and (parent.panel:GetWidth() / 10)) or 0
+
+    control.label:ClearAnchors()
+    container:ClearAnchors()
+
+    control.label:SetAnchor(TOPLEFT, control, TOPLEFT, 0, 0)
+    container:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, 0, 0)
+
+    if control.isHalfWidth then
+        container:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, 0, 0)
+    end
+
+    if editboxData.isExtraWide then
+        container:SetAnchor(BOTTOMLEFT, control, BOTTOMLEFT, 0, 0)
+    else
+        container:SetWidth(MIN_WIDTH * 3.2)
+    end
+
+    if editboxData.isMultiline then
+        container:SetHeight(MIN_HEIGHT * 3)
+    else
+        container:SetHeight(MIN_HEIGHT)
+    end
+
+    if control.isHalfWidth ~= true and editboxData.isExtraWide ~= true then
+        control:SetHeight(container:GetHeight())
+    else
+        control:SetHeight(container:GetHeight() + control.label:GetHeight())
+    end
+
+    editbox:ClearAnchors()
+    editbox:SetAnchor(TOPLEFT, container, TOPLEFT, 2, 2)
+    editbox:SetAnchor(BOTTOMRIGHT, container, BOTTOMRIGHT, -2, -2)
+	--]]
+end
 
 --[[
 local function RuleDataSortingFunction(a, b)
@@ -254,7 +309,6 @@ end
 local function UpdateChoices(name, data)
 	local dropdownCtrl = WINDOW_MANAGER:GetControlByName(name)
     if dropdownCtrl == nil then
-        --d("UpdateChoices: bad control "..name)
         return
     end
 	dropdownCtrl:UpdateChoices(data.choices, data.choicesValues, 
@@ -397,20 +451,6 @@ local function CreateNewBagRuleEntry(name)
 	}
 	return entry	
 end
-
--- replaced by AutoCategory.cache.RemoveRuleFromBag(bagId, name)???
---[[
-local function RemoveRuleFromBag(ruleName, bagId)
-	for i = 1, #saved.bags[bagId].rules do
-		local rule = saved.bags[bagId].rules[i]
-		if rule.name == ruleName then
-			table.remove(saved.bags[bagId].rules, i)
-			return i
-		end
-	end
-	return -1
-end
---]]
 
 -- -------------------------------------------------
 function AutoCategory.AddonMenuInit()
@@ -1103,7 +1143,7 @@ function AutoCategory.AddonMenuInit()
 					name = SI_AC_MENU_EC_EDITBOX_TAG,
 					tooltip = SI_AC_MENU_EC_EDITBOX_TAG_TOOLTIP,
 					getFunc = function() 
-                        if fieldData.currentRule then
+						if fieldData.currentRule then
                             return fieldData.currentRule.tag
                         end
                         return ""
@@ -1185,6 +1225,7 @@ function AutoCategory.AddonMenuInit()
 					isExtraWide = true,
 					disabled = function() return fieldData.currentRule == nil end,
 					width = "full",
+					reference = "AC_EDITBOX_EDITRULE_RULE",
 				},
                 -- RuleCheck Text - AutoCategoryCheckText
                 {
@@ -1417,4 +1458,5 @@ function AutoCategory.AddonMenuInit()
 	LAM:RegisterAddonPanel("AC_CATEGORY_SETTINGS", panelData)
 	LAM:RegisterOptionControls("AC_CATEGORY_SETTINGS", optionsTable)
 	CALLBACK_MANAGER:RegisterCallback("LAM-RefreshPanel", RefreshPanel)
+	CALLBACK_MANAGER:RegisterCallback("LAM-PanelControlsCreated", AC.LengthenRuleBox)
 end

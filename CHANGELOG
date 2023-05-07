@@ -1,3 +1,22 @@
+[COLOR="DeepSkyBlue"]3.4(83) HIDDEN[/COLOR]:
+[LIST]
+[*] Implementing first step of a separate saved variable file specifically for rule definitions. This step will transport rules in the existing saved variable file into the new one.
+[*] API bump for Necrom.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.5(84)[/COLOR]:
+[LIST]
+[*] Corrected a problem with [COLOR="MediumSeaGreen"]cannotdecon()[/COLOR] that only affected players who do not have ESO+. For some reason, it just wasn't working properly.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.5(84)[/COLOR]:
+[LIST]
+[*] Increased the size of the rule definition edit box to 10 lines (up from 3).
+[*] New function [COLOR="MediumSeaGreen"]cannotdecon()[/COLOR]. This function will return true or false depending on if the item can be deconstructed or not. Examples of things that cannot be deconstructed are: jewelry acquired before the Summerset Chapter was released, companion gear, food, potions, etc. Obviously, this is most useful for a rule that picks out items to be deconstructed.
+[*] The function [COLOR="MediumSeaGreen"]isinquickslot()[/COLOR] has been fixed.
+[*] API bump for Necrom.
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.3(82)[/COLOR]:
 [LIST]
 [*] Changed functions [COLOR="MediumSeaGreen"]ck_isunknown()[/COLOR] to work for characters in all accounts on the same computer for the current ESO server (NA, Europe, etc.). The [COLOR="MediumSeaGreen"]ck_isunknown()[/COLOR] and [COLOR="MediumSeaGreen"]ck_isunknowncat()[/COLOR] functions require you to have installed the [COLOR="DarkOrange"]LibCharacterKnowledge[/COLOR] addon by @code65536.
