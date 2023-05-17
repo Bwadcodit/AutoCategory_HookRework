@@ -28,12 +28,6 @@ local cache = AutoCategory.cache
 
 local AC_EMPTY_TAG_NAME = L(SI_AC_DEFAULT_NAME_EMPTY_TAG)
 
---[[
-local function getCategoryName()
-    local cateName = header.slot.dataEntry.data.AC_categoryName
-	return cateName
-end
---]]
 local function getBagTypeId(header)
 	SF.dTable(header,5,"getBagTypeId - header")
 	local bagTypeId = header.slot.dataEntry.data.AC_bagTypeId
@@ -73,10 +67,7 @@ end
 function AutoCategory.CompileRule(rule)
     --local logger = LibDebugLogger("AutoCategory")
     --logger:SetEnabled(true)
-    if rule == nil then
-        return
-    end
-	if rule.name == nil or rule.name == "" then
+    if rule == nil or rule.name == nil or rule.name == "" then
 		return
 	end 
 
@@ -109,6 +100,7 @@ end
 -- Mark those that failed to compile as damaged
 --
 function AutoCategory.RecompileRules(ruleset)
+	-- reset AutoCategory.compiledRules to empty, creating only if necessary
 	AutoCategory.compiledRules = SF.safeTable(AutoCategory.compiledRules)
 	if not ZO_IsTableEmpty(AutoCategory.compiledRules) then
 		ZO_ClearTable(AutoCategory.compiledRules)
@@ -118,11 +110,13 @@ function AutoCategory.RecompileRules(ruleset)
 		--logger:SetEnabled(false)
         return
     end
-    local compiled = AutoCategory.compiledRules
+    --local compiled = AutoCategory.compiledRules
+	-- compile and store each of the rules in the ruleset
     for j = 1, #ruleset do
         if ruleset[j] then
             local r = ruleset[j]
             --local n = r.name
+			-- this stores to AutoCategory.compiledRules
 			AutoCategory.CompileRule(r)
         end
     end
@@ -158,8 +152,12 @@ end
 -- returns true if the a should come before b
 local function BagDataSortingFunction(a, b)
     local result = false
-	if a == nil and b ~= nil then return false end
 	if b == nil then return true end
+	
+	-- b is not nil
+	if a == nil then return false end
+	
+	-- a is not nil
     if a.priority ~= b.priority then
         result = a.priority > b.priority
 		
@@ -173,13 +171,14 @@ end
 
 function AutoCategory.UpdateCurrentSavedVars()
     -- rules, general, and appearance are always accountWide
+    saved.general = AutoCategory.acctSaved.general
+    saved.appearance = AutoCategory.acctSaved.appearance
+
     saved.rules = AutoCategory.acctSaved.rules
     table.sort(saved.rules, RuleSortingFunction)
     AutoCategory.RecompileRules(saved.rules)
 
-    saved.general = AutoCategory.acctSaved.general
-    saved.appearance = AutoCategory.acctSaved.appearance
-
+	-- bags/collapses might or might not be acct wide?
     if not AutoCategory.charSaved.accountWide then
         saved.bags = AutoCategory.charSaved.bags
         saved.collapses = AutoCategory.charSaved.collapses
@@ -427,12 +426,8 @@ function AutoCategory.cache.RemoveRuleFromBag(bagId, name)
 end
 
 function AutoCategory.cache.RemoveRuleByName(name)
-    if not name then
-        return
-    end
-    if not cache.rulesByName[name] then
-        return
-    end
+    if not name then return end
+    if not cache.rulesByName[name] then return end
 
     local ndx = cache.rulesByName[name]
     cache.compiledRules[name] = nil
@@ -462,25 +457,30 @@ end
 
 function AutoCategory.isValidRule(ruledef)
     --make sure rule is well-formed
-    if (not ruledef or not ruledef.name or type(ruledef.name) ~= "string" or ruledef.name == "") then
+	-- validate rule name
+    if (not ruledef or not ruledef.name 
+			or type(ruledef.name) ~= "string" or ruledef.name == "") then
         return false, "name is required"
     end
+	-- validate rule text
     if (not ruledef.rule or type(ruledef.rule) ~= "string" or ruledef.rule == "") then
         return false, "rule text is required"
     end
+	-- validate optional rule description
     if ruledef.description then -- description is optional
         if (type(ruledef.description) ~= "string") then
             return false, "non-nil description must be a string"
         end
     end
+	-- validate optional rule tag
     if ruledef.tag then -- tag is optional
         if (type(ruledef.tag) ~= "string") then
             return false, "non-nil tag must be a string"
         end
     end
+	-- validate compiled rule function if available
     if ruledef.compiled then -- compiled is optional
         if (type(ruledef.compiled) ~= "function") then
-            --d("AddPredefinedRules: compiled is not a function")
             return false, "non-nil compiled must be a lua function"
         end
     end
@@ -605,9 +605,9 @@ function AutoCategory.onLoad(event, addon)
 
     -- load our saved variables
     AC.acctSaved, AC.charSaved = SF.getAllSavedVars("AutoCategorySavedVars",
-		1.1, AC.defaultAcctSettings)
+		1.1, AC.defaultAcctSettings, AC.defaultCharSettings)
 
-    -- init bag category table only when the bag is missing
+    -- init bag category table only when the bag defs is missing
     for k, v in pairs(AC.defaultAcctBagSettings.bags) do
         if AC.acctSaved.bags[k] then
             if not AC.acctSaved.bags[k].rules or #AC.acctSaved.bags[k].rules == 0 then

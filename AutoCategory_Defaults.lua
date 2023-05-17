@@ -263,7 +263,6 @@ AutoCategory.defaultAcctSettings = {
 	},
     collapses = AutoCategory.defaultCollapses,
 }
-
 AutoCategory.defaultAcctBagSettings = {
 	bags = {
 		[AC_BAG_TYPE_BACKPACK] = {
@@ -900,3 +899,9 @@ AutoCategory.defaultAcctBagSettings = {
 		},
 	}, 
 }
+
+AutoCategory.defaultCharSettings = {
+	bags = AutoCategory.defaultAcctBagSettings.bags, 
+    collapses = AutoCategory.defaultCollapses,
+}
+

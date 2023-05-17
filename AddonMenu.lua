@@ -12,12 +12,12 @@ local saved = AutoCategory.saved
 
 --cache data for dropdown: 
 cache.bags.showNames = { 
-	[AC_BAG_TYPE_BACKPACK] = L(SI_AC_BAGTYPE_SHOWNAME_BACKPACK), 
-	[AC_BAG_TYPE_BANK] = L(SI_AC_BAGTYPE_SHOWNAME_BANK),
-	[AC_BAG_TYPE_GUILDBANK] = L(SI_AC_BAGTYPE_SHOWNAME_GUILDBANK),
-	[AC_BAG_TYPE_CRAFTBAG] = L(SI_AC_BAGTYPE_SHOWNAME_CRAFTBAG),
+	[AC_BAG_TYPE_BACKPACK]     = L(SI_AC_BAGTYPE_SHOWNAME_BACKPACK), 
+	[AC_BAG_TYPE_BANK]         = L(SI_AC_BAGTYPE_SHOWNAME_BANK),
+	[AC_BAG_TYPE_GUILDBANK]    = L(SI_AC_BAGTYPE_SHOWNAME_GUILDBANK),
+	[AC_BAG_TYPE_CRAFTBAG]     = L(SI_AC_BAGTYPE_SHOWNAME_CRAFTBAG),
 	[AC_BAG_TYPE_CRAFTSTATION] = L(SI_AC_BAGTYPE_SHOWNAME_CRAFTSTATION), 
-	[AC_BAG_TYPE_HOUSEBANK] = L(SI_AC_BAGTYPE_SHOWNAME_HOUSEBANK),
+	[AC_BAG_TYPE_HOUSEBANK]    = L(SI_AC_BAGTYPE_SHOWNAME_HOUSEBANK),
 }
 cache.bags.values = {	
 	AC_BAG_TYPE_BACKPACK, 
@@ -210,10 +210,6 @@ local function RefreshPanel()
 end 
 
 local doneOnce = false
---	if doneOnce == false then
---		doneOnce = AC.LengthenRuleBox()
---	end
-
 function AutoCategory.LengthenRuleBox()
 	local lines = 10
 	if doneOnce then return true end
@@ -230,41 +226,6 @@ function AutoCategory.LengthenRuleBox()
     control:SetHeight((MIN_HEIGHT * lines) + control.label:GetHeight())
 
 	return true
---[[
-    local MIN_WIDTH = (parent.GetWidth and (parent:GetWidth() / 10)) or (parent.panel.GetWidth and (parent.panel:GetWidth() / 10)) or 0
-
-    control.label:ClearAnchors()
-    container:ClearAnchors()
-
-    control.label:SetAnchor(TOPLEFT, control, TOPLEFT, 0, 0)
-    container:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, 0, 0)
-
-    if control.isHalfWidth then
-        container:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, 0, 0)
-    end
-
-    if editboxData.isExtraWide then
-        container:SetAnchor(BOTTOMLEFT, control, BOTTOMLEFT, 0, 0)
-    else
-        container:SetWidth(MIN_WIDTH * 3.2)
-    end
-
-    if editboxData.isMultiline then
-        container:SetHeight(MIN_HEIGHT * 3)
-    else
-        container:SetHeight(MIN_HEIGHT)
-    end
-
-    if control.isHalfWidth ~= true and editboxData.isExtraWide ~= true then
-        control:SetHeight(container:GetHeight())
-    else
-        control:SetHeight(container:GetHeight() + control.label:GetHeight())
-    end
-
-    editbox:ClearAnchors()
-    editbox:SetAnchor(TOPLEFT, container, TOPLEFT, 2, 2)
-    editbox:SetAnchor(BOTTOMRIGHT, container, BOTTOMRIGHT, -2, -2)
-	--]]
 end
 
 --[[
@@ -306,8 +267,8 @@ local function ToggleSubmenu(typeString, open)
 	end
 end
 
-local function UpdateChoices(name, data)
-	local dropdownCtrl = WINDOW_MANAGER:GetControlByName(name)
+local function UpdateChoices(controlname, data)
+	local dropdownCtrl = WINDOW_MANAGER:GetControlByName(controlname)
     if dropdownCtrl == nil then
         return
     end
@@ -337,12 +298,12 @@ local function RefreshDropdownData()
     local ltag = fieldData.editRuleTag.indexValue
 	if ltag and cache.rulesByTag[ltag] then 
 		dataCurrentRules_EditRule.showNames = cache.rulesByTag[ltag].showNames
-		dataCurrentRules_EditRule.values = cache.rulesByTag[ltag].values
-		dataCurrentRules_EditRule.tooltips = cache.rulesByTag[ltag].tooltips
+		dataCurrentRules_EditRule.values    = cache.rulesByTag[ltag].values
+		dataCurrentRules_EditRule.tooltips  = cache.rulesByTag[ltag].tooltips
 	end	
-	fieldData.editRuleCat.choices = dataCurrentRules_EditRule.showNames or {}
-	fieldData.editRuleCat.choicesValues = dataCurrentRules_EditRule.values or {}
-	fieldData.editRuleCat.choicesTooltips = dataCurrentRules_EditRule.tooltips or {}
+	fieldData.editRuleCat.choices         = SF.safeTable(dataCurrentRules_EditRule.showNames)
+	fieldData.editRuleCat.choicesValues   = SF.safeTable(dataCurrentRules_EditRule.values)
+	fieldData.editRuleCat.choicesTooltips = SF.safeTable(dataCurrentRules_EditRule.tooltips)
 	if fieldData.editRuleCat.indexValue == "" and #dataCurrentRules_EditRule.values > 0 then
 		fieldData.editRuleCat.indexValue = dataCurrentRules_EditRule.values[1]
 	end
@@ -352,11 +313,11 @@ local function RefreshDropdownData()
     local lbag = fieldData.editBag.indexValue
 	if lbag and cache.entriesByBag[lbag] then 
 		dataCurrentRules_EditBag.showNames = cache.entriesByBag[lbag].showNames
-		dataCurrentRules_EditBag.values =cache.entriesByBag[lbag].values
-		dataCurrentRules_EditBag.tooltips = cache.entriesByBag[lbag].tooltips
+		dataCurrentRules_EditBag.values    = cache.entriesByBag[lbag].values
+		dataCurrentRules_EditBag.tooltips  = cache.entriesByBag[lbag].tooltips
 	end
-	fieldData.editBagRule.choices = dataCurrentRules_EditBag.showNames
-	fieldData.editBagRule.choicesValues = dataCurrentRules_EditBag.values
+	fieldData.editBagRule.choices         = dataCurrentRules_EditBag.showNames
+	fieldData.editBagRule.choicesValues   = dataCurrentRules_EditBag.values
 	fieldData.editBagRule.choicesTooltips = dataCurrentRules_EditBag.tooltips
 	if fieldData.editBagRule.indexValue == "" and #dataCurrentRules_EditBag.values > 0 then
 		fieldData.editBagRule.indexValue = dataCurrentRules_EditBag.values[1]
@@ -377,8 +338,8 @@ local function RefreshDropdownData()
 			end
 		end
 	end
-	fieldData.addCatRule.choices = dataCurrentRules_AddCategory.choices
-	fieldData.addCatRule.choicesValues = dataCurrentRules_AddCategory.choicesValues
+	fieldData.addCatRule.choices         = dataCurrentRules_AddCategory.choices
+	fieldData.addCatRule.choicesValues   = dataCurrentRules_AddCategory.choicesValues
 	fieldData.addCatRule.choicesTooltips = dataCurrentRules_AddCategory.choicesTooltips
 	if fieldData.addCatRule.indexValue == "" 
 			and #dataCurrentRules_AddCategory.choicesValues > 0 then
@@ -399,7 +360,7 @@ local function RemoveDropDownItem(dataArray, removeItem, emptyCallback)
 		end
 	end
 	
-    if removeIndex == -1 then return end
+    if removeIndex <= 0 then return end
 	
 	if num == 1 then
 		--select none
@@ -529,9 +490,9 @@ function AutoCategory.AddonMenuInit()
                 
                 RefreshDropdownData()
                 
-                UpdateChoices("AC_DROPDOWN_EDITBAG_BAG", fieldData.editBag)
+                UpdateChoices("AC_DROPDOWN_EDITBAG_BAG",     fieldData.editBag)
                 UpdateChoices("AC_DROPDOWN_ADDCATEGORY_TAG", fieldData.addCatTag)
-                UpdateChoices("AC_DROPDOWN_EDITRULE_TAG", fieldData.editRuleTag)
+                UpdateChoices("AC_DROPDOWN_EDITRULE_TAG",    fieldData.editRuleTag)
             end,
         },			
         {
@@ -549,8 +510,8 @@ function AutoCategory.AddonMenuInit()
 					name = SI_AC_MENU_BS_DROPDOWN_BAG,
 					scrollable = false,
 					tooltip = L(SI_AC_MENU_BS_DROPDOWN_BAG_TOOLTIP),
-					choices = fieldData.editBag.choices,
-					choicesValues = fieldData.editBag.choicesValues,
+					choices         = fieldData.editBag.choices,
+					choicesValues   = fieldData.editBag.choicesValues,
 					choicesTooltips = fieldData.editBag.choicesTooltips,
 					
 					getFunc = function()  
@@ -591,8 +552,8 @@ function AutoCategory.AddonMenuInit()
 					type = "dropdown",
 					name = SI_AC_MENU_BS_DROPDOWN_CATEGORIES,
 					scrollable = true,
-					choices = fieldData.editBagRule.choices,
-					choicesValues = fieldData.editBagRule.choicesValues,
+					choices         = fieldData.editBagRule.choices,
+					choicesValues   = fieldData.editBagRule.choicesValues,
 					choicesTooltips = fieldData.editBagRule.choicesTooltips,
 					
 					getFunc = function() 
@@ -735,8 +696,8 @@ function AutoCategory.AddonMenuInit()
 					type = "dropdown",
 					name = SI_AC_MENU_AC_DROPDOWN_TAG,
 					scrollable = true,
-					choices = fieldData.addCatTag.choices, 
-					choicesValues = fieldData.addCatTag.choicesValues,
+					choices         = fieldData.addCatTag.choices, 
+					choicesValues   = fieldData.addCatTag.choicesValues,
 					choicesTooltips = fieldData.addCatTag.choicesTooltips,
                     sort = "name-up",
 					
@@ -807,19 +768,20 @@ function AutoCategory.AddonMenuInit()
 						assert(cache.entriesByName[bagId][ruleName] == nil, "Bag(" .. bagId .. ") already has the rule: ".. ruleName)
 					 
                         if cache.entriesByName[bagId][ruleName] == nil then
-						local entry = CreateNewBagRuleEntry(ruleName)
-						table.insert(saved.bags[bagId].rules, entry) 
-                        fieldData.editBagRule.indexValue = ruleName
-						RemoveDropDownItem("AC_DROPDOWN_ADDCATEGORY_RULE", fieldData.addCatRule.choicesValues, ruleName)
-						 
-						AutoCategory.cacheInitialize()
-						RefreshDropdownData()
+							local entry = CreateNewBagRuleEntry(ruleName)
+							table.insert(saved.bags[bagId].rules, entry) 
+							fieldData.editBagRule.indexValue = ruleName
+							RemoveDropDownItem("AC_DROPDOWN_ADDCATEGORY_RULE", fieldData.addCatRule.choicesValues, ruleName)
+							 
+							AutoCategory.cacheInitialize()
+							RefreshDropdownData()
                         end
                         
                         fieldData.editBagRule.indexValue = ruleName
-						RemoveDropDownItem(fieldData.addCatRule.choicesValues, ruleName)
+						RemoveDropDownItem("AC_DROPDOWN_ADDCATEGORY_RULE",fieldData.addCatRule.choicesValues, ruleName)
 						if #fieldData.addCatRule.choices > 0 then
-                            fieldData.addCatRule.indexValue = fieldData.addCatRule.choicesValues[1]
+                            fieldData.addCatRule.indexValue = 	
+								fieldData.addCatRule.choicesValues[1]
                         end
 					end,
 					disabled = function() return #fieldData.addCatRule.choices == 0 end,
@@ -1099,14 +1061,17 @@ function AutoCategory.AddonMenuInit()
 							return
 						end
 						if value == "" then
-							warningDuplicatedName.warningMessage = L(SI_AC_WARNING_CATEGORY_NAME_EMPTY)
+							warningDuplicatedName.warningMessage = L(
+								SI_AC_WARNING_CATEGORY_NAME_EMPTY)
 							value = oldName
                             return
 						end
 						
 						local isDuplicated = IsRuleNameUsed(value)
 						if isDuplicated then
-							warningDuplicatedName.warningMessage = string.format(L(SI_AC_WARNING_CATEGORY_NAME_DUPLICATED), value, GetUsableRuleName(value))
+							warningDuplicatedName.warningMessage = string.format(
+								L(SI_AC_WARNING_CATEGORY_NAME_DUPLICATED), 
+								value, GetUsableRuleName(value))
 							value = oldName
                             --change editbox's value
                             local control = WINDOW_MANAGER:GetControlByName("AC_EDITBOX_EDITRULE_NAME", "")

@@ -1,10 +1,9 @@
-[COLOR="DeepSkyBlue"]3.4(83) HIDDEN[/COLOR]:
+[COLOR="DeepSkyBlue"]3.5.2(86)[/COLOR]:
 [LIST]
-[*] Implementing first step of a separate saved variable file specifically for rule definitions. This step will transport rules in the existing saved variable file into the new one.
-[*] API bump for Necrom.
+[*] Possibly corrected a problem reported by Kiasmalyn regarding a UI error getting thrown in AddonMenu.lua.
 [/LIST]
 
-[COLOR="DeepSkyBlue"]3.5(84)[/COLOR]:
+[COLOR="DeepSkyBlue"]3.5.1(85)[/COLOR]:
 [LIST]
 [*] Corrected a problem with [COLOR="MediumSeaGreen"]cannotdecon()[/COLOR] that only affected players who do not have ESO+. For some reason, it just wasn't working properly.
 [/LIST]
