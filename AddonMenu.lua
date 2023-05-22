@@ -36,35 +36,24 @@ cache.bags.tooltips = {
 	L(SI_AC_BAGTYPE_TOOLTIP_HOUSEBANK),
 }
 
+local function newCVT(ndx)
+	local tbl = {
+		indexValue = "", 
+		choices = {}, choicesValues = {}, choicesTooltips = {}
+	}
+	if ndx == nil then return tbl end
+	indexValue = ndx
+	return tbl
+end
+
 local fieldData = {
-	editBag = {
-		indexValue = AC_BAG_TYPE_BACKPACK, 
-		choices = {}, choicesValues = {}, choicesTooltips = {}
-	},
-	editBagRule = {
-		indexValue = "", 
-		choices = {}, choicesValues = {}, choicesTooltips = {}
-	},
-	addCatTag = {
-		indexValue = "", 
-		choices = {}, choicesValues = {}, choicesTooltips = {}
-	},
-	addCatRule = {
-		indexValue = "", 
-		choices = {}, choicesValues = {}, choicesTooltips = {}
-	},
-	editRuleTag = {
-		indexValue = "", 
-		choices = {}, choicesValues = {}, choicesTooltips = {}
-	},
-	editRuleCat = {
-		indexValue = "", 
-		choices = {}, choicesValues = {}, choicesTooltips = {}
-	},
-	importBag = {
-		indexValue = AC_BAG_TYPE_BACKPACK, 
-		choices = {}, choicesValues = {}, choicesTooltips = {}
-	},
+	editBag =     newCVT(AC_BAG_TYPE_BACKPACK),
+	editBagRule = newCVT(),
+	addCatTag =   newCVT(),
+	addCatRule =  newCVT(),
+	editRuleTag = newCVT(),
+	editRuleCat = newCVT(),
+	importBag =   newCVT(AC_BAG_TYPE_BACKPACK),
     currentRule = { 
 		name = "", 
 		description = "", 
@@ -227,32 +216,6 @@ function AutoCategory.LengthenRuleBox()
 
 	return true
 end
-
---[[
-local function RuleDataSortingFunction(a, b)
-	local result = false
-	if a.tag ~= b.tag then
-		result = a.tag < b.tag
-		
-	else
-		--alphabetical sort, cannot have same name rules
-		result = a.name < b.name
-	end
-	
-	return result
-end
-
-local function BagDataSortingFunction(a, b)
-	local result = false
-	if a.priority ~= b.priority then
-		result = a.priority > b.priority
-		
-	else
-		result = a.name < b.name
-	end
-	return result
-end 
---]]
 
 local function ToggleSubmenu(typeString, open)
 	local control = WINDOW_MANAGER:GetControlByName(typeString, "")
@@ -1329,6 +1292,19 @@ function AutoCategory.AddonMenuInit()
                     end,
                     scrollable = 7,
                 },
+                -- Category Text Font Size
+                {
+                    type = 'slider',
+                    name = SI_AC_MENU_EC_DROPDOWN_CATEGORY_TEXT_FONT_SIZE,
+                    min = 8,
+                    max = 32,
+                    getFunc = function()
+                        return saved.appearance["CATEGORY_FONT_SIZE"]
+                    end,
+                    setFunc = function(v)
+                        saved.appearance["CATEGORY_FONT_SIZE"] = v
+                    end,
+                },
                 -- Category Text Color
                 {
                     type = 'colorpicker',
@@ -1345,18 +1321,21 @@ function AutoCategory.AddonMenuInit()
                     widgetRightAlign		= true,
                     widgetPositionAndResize	= -15,
                 },
-                -- Category Text Font Size
+                -- Hidden Category Text Color
                 {
-                    type = 'slider',
-                    name = SI_AC_MENU_EC_DROPDOWN_CATEGORY_TEXT_FONT_SIZE,
-                    min = 8,
-                    max = 32,
+                    type = 'colorpicker',
+                    name = SI_AC_MENU_EC_DROPDOWN_HIDDEN_CATEGORY_TEXT_COLOR,
                     getFunc = function()
-                        return saved.appearance["CATEGORY_FONT_SIZE"]
+                        return unpack(saved.appearance["HIDDEN_CATEGORY_FONT_COLOR"])
                     end,
-                    setFunc = function(v)
-                        saved.appearance["CATEGORY_FONT_SIZE"] = v
+                    setFunc = function(r, g, b, a)
+                        saved.appearance["HIDDEN_CATEGORY_FONT_COLOR"][1] = r
+                        saved.appearance["HIDDEN_CATEGORY_FONT_COLOR"][2] = g
+                        saved.appearance["HIDDEN_CATEGORY_FONT_COLOR"][3] = b
+                        saved.appearance["HIDDEN_CATEGORY_FONT_COLOR"][4] = a 
                     end,
+                    widgetRightAlign		= true,
+                    widgetPositionAndResize	= -15,
                 },
                 -- Category Ungrouped Title EditBox
                 {

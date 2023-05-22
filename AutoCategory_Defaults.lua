@@ -249,6 +249,12 @@ AutoCategory.defaultAcctSettings = {
 			[3] = 1,
 			[4] = 1,
 		},
+		["HIDDEN_CATEGORY_FONT_COLOR"] =  {
+			[1] = 125,
+			[2] = 125,
+			[3] = 125,
+			[4] = 1,
+		},
 		["CATEGORY_FONT_SIZE"] = 18,
 		["CATEGORY_FONT_ALIGNMENT"] = 1,
 		["CATEGORY_OTHER_TEXT"] = L(SI_AC_DEFAULT_NAME_CATEGORY_OTHER),

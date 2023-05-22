@@ -115,24 +115,34 @@ local function setup_InventoryItemRowHeader(rowControl, slot, overrideOptions)
 				appearance["CATEGORY_FONT_NAME"]), 
 				appearance["CATEGORY_FONT_SIZE"], 
 				appearance["CATEGORY_FONT_STYLE"]))
-	headerLabel:SetColor(appearance["CATEGORY_FONT_COLOR"][1], 
-						 appearance["CATEGORY_FONT_COLOR"][2], 
-						 appearance["CATEGORY_FONT_COLOR"][3], 
-						 appearance["CATEGORY_FONT_COLOR"][4])
-	
 	local data = SF.safeTable(slot.dataEntry.data)
 	local cateName = SF.nilDefault(data.AC_categoryName, "Unknown")
 	local bagTypeId = SF.nilDefault(data.AC_bagTypeId, 0)
 	local num = SF.nilDefault(data.AC_catCount,0)
 	
+	local cache = AutoCategory.cache
+	local headerColor = "CATEGORY_FONT_COLOR"
+	if cache.entriesByName[bagTypeId][cateName] then
+		if cache.entriesByName[bagTypeId][cateName].isHidden then
+			headerColor = "HIDDEN_CATEGORY_FONT_COLOR"
+		end
+	elseif AC.saved.bags[bagTypeId].isUngroupedHidden and
+			cateName == AutoCategory.saved.appearance["CATEGORY_OTHER_TEXT"] then
+		headerColor = "HIDDEN_CATEGORY_FONT_COLOR"
+	end
+	headerLabel:SetColor(appearance[headerColor][1], 
+						 appearance[headerColor][2], 
+						 appearance[headerColor][3], 
+						 appearance[headerColor][4])
+	
 	-- Add count to category name if selected in options
     if AutoCategory.acctSaved.general["SHOW_CATEGORY_ITEM_COUNT"] then
         headerLabel:SetText(string.format('%s |[%d]|r', cateName, num))
         headerLabel:SetColor(
-			appearance["CATEGORY_FONT_COLOR"][1], 
-			appearance["CATEGORY_FONT_COLOR"][2],
-			appearance["CATEGORY_FONT_COLOR"][3], 
-			appearance["CATEGORY_FONT_COLOR"][4])
+			appearance[headerColor][1], 
+			appearance[headerColor][2],
+			appearance[headerColor][3], 
+			appearance[headerColor][4])
 			
     else
         headerLabel:SetText(cateName)
@@ -297,11 +307,11 @@ local function detectItemChanges(itemEntry, newEntryHash, needReload)
 	local currentTime = os.clock()
 	
 	local function setChange(val)
-		if val == true then
-			data.AC_lastUpdateTime = currentTime
-			changeDetected = true
-		end	
-		return changeDetected
+		if val == false then return false end
+		
+		data.AC_lastUpdateTime = currentTime
+		changeDetected = true
+		return true
 	end
 	
 	if needReload == true then

@@ -1,3 +1,9 @@
+[COLOR="DeepSkyBlue"]3.6(87)[/COLOR]:
+[LIST]
+[*] Added an Appearance Setting for a new "Hidden Category Text Color" which allows you to choose what color that a category that was set as Hidden will be displayed as. This will make it readily apparent when you have turned Hidden ON for a category or for "ungrouped" which is where Others is listed as it will make the category name a different color from the non-hidden ones. (Hopefully, this will assist in telling the difference between addon bugs and unfortunate unintended settings.)
+[*] Modified the storage of collapsed categories in Saved Variables so that it takes up less space in the file.
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.5.2(86)[/COLOR]:
 [LIST]
 [*] Possibly corrected a problem reported by Kiasmalyn regarding a UI error getting thrown in AddonMenu.lua.

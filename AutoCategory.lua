@@ -37,7 +37,7 @@ local function getBagTypeId(header)
 	return bagTypeId
 end
 
-function AC.listcount(tbl)
+function AutoCategory.listcount(tbl)
     local i = 0
     if tbl then
         for k, v in pairs(tbl) do
@@ -57,6 +57,19 @@ function AutoCategory.debugCache()
     d("Cache bags: " .. AC.listcount(cache.bags))
     d("Entries by Bag: " .. AC.listcount(cache.entriesByBag))
     d("Entries by Name: " .. AC.listcount(cache.entriesByName))
+end
+
+function AutoCategory.debugEBT()
+	for k, v in pairs(cache.entriesByName[1]) do
+		d("k = "..k)
+		if type(v) == "table" then
+			for k1,v1 in pairs(v) do
+				d("  k1="..k1.."  v1="..SF.str(v1))
+			end
+		else
+		    d("v= "..SF.str(v))
+		end
+	end
 end
 
 -- -------------------------------------------------
@@ -271,14 +284,18 @@ end
 function AutoCategory.IsCategoryCollapsed(bagTypeId, categoryName)
 	if bagTypeId == nil or categoryName == nil then return false end
 	
-	saved.collapses[bagTypeId] = SF.safeTable(saved.collapses[bagTypeId])
+	--saved.collapses[bagTypeId] = SF.safeTable(saved.collapses[bagTypeId])
 	collapsetbl = saved.collapses[bagTypeId]
-    collapsetbl[categoryName] = SF.nilDefault(collapsetbl[categoryName], false)
+    --collapsetbl[categoryName] = SF.nilDefault(collapsetbl[categoryName], false)
 
-    return collapsetbl[categoryName]
+    return collapsetbl[categoryName] or false
 end
 
 function AutoCategory.SetCategoryCollapsed(bagTypeId, categoryName, collapsed)
+	if collapsed == false then 
+		d("Throwing away collapse status of "..categoryName.." for bag "..bagTypeId)
+		collapsed = nil 
+	end
     saved.collapses[bagTypeId][categoryName] = collapsed
 end
 -- -----------------------------------------------------------
@@ -798,7 +815,7 @@ function AC_ItemRowHeader_OnShowContextMenu(header)
         L(SI_CONTEXT_MENU_EXPAND_ALL),
         function()
             for k, v in pairs(AutoCategory.saved.collapses[bagTypeId]) do
-                AutoCategory.saved.collapses[bagTypeId][k] = false
+                AutoCategory.saved.collapses[bagTypeId][k] = nil
             end
             AutoCategory.RefreshCurrentList()
         end
