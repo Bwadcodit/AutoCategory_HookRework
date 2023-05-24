@@ -1,3 +1,8 @@
+[COLOR="DeepSkyBlue"]3.6.1(87)[/COLOR]:
+[LIST]
+[*] Removed debug message that was reporting "throwing away collapse status of ...". (Reported by Slane320). Sorry.
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.6(87)[/COLOR]:
 [LIST]
 [*] Added an Appearance Setting for a new "Hidden Category Text Color" which allows you to choose what color that a category that was set as Hidden will be displayed as. This will make it readily apparent when you have turned Hidden ON for a category or for "ungrouped" which is where Others is listed as it will make the category name a different color from the non-hidden ones. (Hopefully, this will assist in telling the difference between addon bugs and unfortunate unintended settings.)

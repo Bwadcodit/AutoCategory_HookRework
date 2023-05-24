@@ -293,7 +293,7 @@ end
 
 function AutoCategory.SetCategoryCollapsed(bagTypeId, categoryName, collapsed)
 	if collapsed == false then 
-		d("Throwing away collapse status of "..categoryName.." for bag "..bagTypeId)
+		--d("Throwing away collapse status of "..categoryName.." for bag "..bagTypeId)
 		collapsed = nil 
 	end
     saved.collapses[bagTypeId][categoryName] = collapsed
