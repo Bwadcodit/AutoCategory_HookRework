@@ -13,10 +13,10 @@ AutoCategory.saved = {
 }
 AutoCategory.cache = {
     rulesByName = {}, -- [name] rule#
-    rulesByTag = {}, -- [tag] {showNames{rule.name}, tooltips{rule.desc/name}}
+    rulesByTag_svt = {}, -- [tag] {showNames{rule.name}, tooltips{rule.desc/name}}
     compiledRules = AC.compiledRules, -- [name] function
     tags = {}, -- [#] tagname
-    bags = {}, -- {showNames{bagname}, values{bagid}, tooltips{bagname}} -- for the bags themselves
+    bags_svt = {}, -- {showNames{bagname}, values{bagid}, tooltips{bagname}} -- for the bags themselves
     entriesByBag = {}, -- [bagId] {showNames{ico rule.name (pri)}, values{rule.name}, tooltips{rule.desc/name or missing}} --
     entriesByName = {} -- [bagId][rulename] {priority, isHidden}
 }
@@ -51,10 +51,10 @@ function AutoCategory.debugCache()
     d("Saved rules: " .. #saved.rules)
     d("Compiled rules: " .. AC.listcount(cache.compiledRules))
     d("Rules by Name: " .. AC.listcount(cache.rulesByName))
-    d("Rules by Tag: " .. AC.listcount(cache.rulesByTag))
+    d("Rules by Tag: " .. AC.listcount(cache.rulesByTag_svt))
     d("Tags: " .. AC.listcount(cache.tags))
     d("Saved bags: " .. #saved.bags)
-    d("Cache bags: " .. AC.listcount(cache.bags))
+    d("Cache bags: " .. AC.listcount(cache.bags_svt))
     d("Entries by Bag: " .. AC.listcount(cache.entriesByBag))
     d("Entries by Name: " .. AC.listcount(cache.entriesByName))
 end
@@ -275,8 +275,8 @@ function AutoCategory.LoadCollapse()
 end
 
 function AutoCategory.ResetCollapse(vars)
-    for i = 1, #cache.bags do
-        ZO_ClearTable(vars.collapses[i])
+    for i = 1, #cache.bags_svt do
+		vars.collapses[i] = nil
     end
 end
 
@@ -284,16 +284,12 @@ end
 function AutoCategory.IsCategoryCollapsed(bagTypeId, categoryName)
 	if bagTypeId == nil or categoryName == nil then return false end
 	
-	--saved.collapses[bagTypeId] = SF.safeTable(saved.collapses[bagTypeId])
-	collapsetbl = saved.collapses[bagTypeId]
-    --collapsetbl[categoryName] = SF.nilDefault(collapsetbl[categoryName], false)
-
+	collapsetbl = SF.safeTable(saved.collapses[bagTypeId])
     return collapsetbl[categoryName] or false
 end
 
 function AutoCategory.SetCategoryCollapsed(bagTypeId, categoryName, collapsed)
 	if collapsed == false then 
-		--d("Throwing away collapse status of "..categoryName.." for bag "..bagTypeId)
 		collapsed = nil 
 	end
     saved.collapses[bagTypeId][categoryName] = collapsed
@@ -301,36 +297,17 @@ end
 -- -----------------------------------------------------------
 
 function AutoCategory.ResetToDefaults()
-    if AutoCategory.acctSaved.rules then
-        ZO_ClearTable(AutoCategory.acctSaved.rules)
-		
-    else
-        AutoCategory.acctSaved.rules = {}
-    end
+	SF.safeClearTable(AutoCategory.acctSaved.rules)
     ZO_DeepTableCopy(AutoCategory.defaultAcctSettings.rules, AutoCategory.acctSaved.rules)
 
-    if AutoCategory.acctSaved.bags then
-        ZO_ClearTable(AutoCategory.acctSaved.bags)
-		
-    else
-        AutoCategory.acctSaved.bags = {}
-    end
+	SF.safeClearTable(AutoCategory.acctSaved.bags)
     ZO_DeepTableCopy(AutoCategory.defaultAcctSettings.bags, AutoCategory.acctSaved.bags)
 
-    if AutoCategory.acctSaved.appearance then
-        ZO_ClearTable(AutoCategory.acctSaved.appearance)
-		
-    else
-        AutoCategory.acctSaved.appearance = {}
-    end
-    ZO_DeepTableCopy(AutoCategory.defaultAcctSettings.appearance, AutoCategory.acctSaved.appearance)
+	SF.safeClearTable(AutoCategory.acctSaved.appearance)
+    ZO_DeepTableCopy(AutoCategory.defaultAcctSettings.appearance,
+			AutoCategory.acctSaved.appearance)
 
-    if AutoCategory.charSaved.bags then
-        ZO_ClearTable(AutoCategory.charSaved.bags)
-		
-    else
-        AutoCategory.charSaved.bags = {}
-    end
+	SF.safeClearTable(AutoCategory.charSaved.bags)
     ZO_DeepTableCopy(AutoCategory.defaultSettings.bags, AutoCategory.charSaved.bags)
 
     AutoCategory.charSaved.accountWide = AutoCategory.defaultSettings.accountWide
@@ -345,9 +322,9 @@ end
 --
 function AutoCategory.cacheInitialize()
     -- initialize the rules-based lookups
-    ZO_ClearTable(cache.rulesByName)
-    ZO_ClearTable(cache.rulesByTag)
-    ZO_ClearTable(cache.tags)
+    SF.safeClearTable(cache.rulesByName)
+    SF.safeClearTable(cache.rulesByTag_svt)
+    SF.safeClearTable(cache.tags)
     --table.sort(saved.rules, RuleDataSortingFunction ) -- already sorted by name
     for ndx = 1, #saved.rules do
         local rule = saved.rules[ndx]
@@ -359,17 +336,17 @@ function AutoCategory.cacheInitialize()
             tag = AC_EMPTY_TAG_NAME
         end
         --update cache for tag grouping
-        if not cache.rulesByTag[tag] then
+        if not cache.rulesByTag_svt[tag] then
             table.insert(cache.tags, tag)
-            cache.rulesByTag[tag] = {showNames = {}, values = {}, tooltips = {}}
+            cache.rulesByTag_svt[tag] = {showNames = {}, values = {}, tooltips = {}}
         end
         local tooltip = rule.description
         if rule.description == "" then
             tooltip = rule.name
         end
-        table.insert(cache.rulesByTag[tag].showNames, name)
-        table.insert(cache.rulesByTag[tag].values, name)
-        table.insert(cache.rulesByTag[tag].tooltips, tooltip)
+        table.insert(cache.rulesByTag_svt[tag].showNames, name)
+        table.insert(cache.rulesByTag_svt[tag].values, name)
+        table.insert(cache.rulesByTag_svt[tag].tooltips, tooltip)
     end
 
     -- initialize the bag-based lookups
@@ -377,17 +354,21 @@ function AutoCategory.cacheInitialize()
     ZO_ClearTable(cache.entriesByBag)
     -- load in the bagged rules (sorted by priority high-to-low)
     for bagId = 1, #saved.bags do
-        cache.entriesByBag[bagId] = cache.entriesByBag[bagId] 
-				or {showNames = {}, values = {}, tooltips = {}}
+		if cache.entriesByBag[bagId] == nil then
+			cache.entriesByBag[bagId] = {showNames = {}, values = {}, tooltips = {}}
+		end
+
+		cache.entriesByName[bagId] = SF.safeTable(cache.entriesByName[bagId])
+        local ename = cache.entriesByName[bagId]
         local ebag = cache.entriesByBag[bagId]
 
-        cache.entriesByName[bagId] = cache.entriesByName[bagId] or {}
-        local ename = cache.entriesByName[bagId]
-
-        local ibag = saved.bags[bagId] or {rules={}}
-        table.sort(ibag.rules, BagDataSortingFunction)
-        for entry = 1, #ibag.rules do
-            local data = ibag.rules[entry] -- data equals {name, priority}
+		if saved.bags[bagId] == nil then
+			saved.bags[bagId] = {rules={}}
+		end
+		local svdbag = saved.bags[bagId]
+        table.sort(svdbag.rules, BagDataSortingFunction)
+        for entry = 1, #svdbag.rules do
+            local data = svdbag.rules[entry] -- data equals {name, priority}
 
             local ruleName = data.name
             ename[ruleName] = data
@@ -450,8 +431,8 @@ function AutoCategory.cache.RemoveRuleByName(name)
     cache.compiledRules[name] = nil
     cache.rulesByName[name] = nil
 
-    -- remove from cache.rulesByTag
-    for t, s in pairs(cache.rulesByTag) do
+    -- remove from cache.rulesByTag_svt
+    for t, s in pairs(cache.rulesByTag_svt) do
         for i = 1, #s.showNames do
             if s.showNames[i] == name then
                 table.remove(s.showNames, i)
@@ -517,8 +498,8 @@ function AutoCategory.cache.AddRule(rule)
     if not rule.tag or rule.tag == "" then
         rule.tag = AC_EMPTY_TAG_NAME
     end
-    if cache.rulesByTag[rule.tag] == nil then
-        cache.rulesByTag[rule.tag] = {showNames = {}, values = {}, tooltips = {}}
+    if cache.rulesByTag_svt[rule.tag] == nil then
+        cache.rulesByTag_svt[rule.tag] = {showNames = {}, values = {}, tooltips = {}}
     end
 	
 	local rule_ndx = cache.rulesByName[rule.name]
@@ -533,9 +514,9 @@ function AutoCategory.cache.AddRule(rule)
 		rule_ndx = #saved.rules
 		cache.rulesByName[rule.name] = rule_ndx
 
-		table.insert(cache.rulesByTag[rule.tag].showNames, rule.name)
-		table.insert(cache.rulesByTag[rule.tag].values, rule.name)
-		table.insert(cache.rulesByTag[rule.tag].tooltips, tt)
+		table.insert(cache.rulesByTag_svt[rule.tag].showNames, rule.name)
+		table.insert(cache.rulesByTag_svt[rule.tag].values, rule.name)
+		table.insert(cache.rulesByTag_svt[rule.tag].tooltips, tt)
     end
 
     AC.CompileRule(rule)
@@ -544,8 +525,8 @@ end
 function AutoCategory.cache.AddRuleToBag(bagId, rulename, priority)
     local entry = {name = rulename, priority = priority}
 
-    saved.bags[bagId] = saved.bags[bagId] or {}
-    cache.entriesByName[bagId] = cache.entriesByName[bagId] or {}
+    saved.bags[bagId] = SF.safeTable(saved.bags[bagId])
+    cache.entriesByName[bagId] = SF.safeTable(cache.entriesByName[bagId])
     if not cache.entriesByName[bagId][rulename] then
         table.insert(saved.bags[bagId], entry)
     end
@@ -557,7 +538,9 @@ function AutoCategory.cache.AddRuleToBag(bagId, rulename, priority)
     local sn = AutoCategory.BagRuleEntry.formatShow(entry, rule)
     local tt = AutoCategory.BagRuleEntry.formatTooltip(rule)
 
-    cache.entriesByBag[bagId] = cache.entriesByBag[bagId] or {showNames = {}, values = {}, tooltips = {}}
+	if cache.entriesByBag[bagId] == nil then
+		cache.entriesByBag[bagId] = {showNames = {}, values = {}, tooltips = {}}
+	end
     table.insert(cache.entriesByBag[bagId].showNames, sn)
     table.insert(cache.entriesByBag[bagId].values, rulename)
     table.insert(cache.entriesByBag[bagId].tooltips, tt)

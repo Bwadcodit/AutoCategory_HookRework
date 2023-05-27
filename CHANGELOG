@@ -1,4 +1,9 @@
-[COLOR="DeepSkyBlue"]3.6.1(87)[/COLOR]:
+[COLOR="DeepSkyBlue"]3.6.2(89)[/COLOR]:
+[LIST]
+[*] Fixed addon settings so that you do not get a bunch of extra (possibly missing) categories listed in the Bag Settings categories drop down menu. This error was traced down to only occurring when you do not use Account-Wide - it added them anyway. (Reported most recently by Saint-Ange.)
+[/LIST]
+
+[COLOR="DeepSkyBlue"]3.6.1(88)[/COLOR]:
 [LIST]
 [*] Removed debug message that was reporting "throwing away collapse status of ...". (Reported by Slane320). Sorry.
 [/LIST]
