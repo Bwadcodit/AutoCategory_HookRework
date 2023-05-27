@@ -163,6 +163,7 @@ local function setup_InventoryItemRowHeader(rowControl, slot, overrideOptions)
 		if cache.entriesByName[bagTypeId][cateName].isHidden then
 			headerColor = "HIDDEN_CATEGORY_FONT_COLOR"
 		end
+		
 	elseif AC.saved.bags[bagTypeId].isUngroupedHidden and
 			cateName == AutoCategory.saved.appearance["CATEGORY_OTHER_TEXT"] then
 		headerColor = "HIDDEN_CATEGORY_FONT_COLOR"
@@ -302,6 +303,12 @@ local function runRulesOnEntry(itemEntry, specialType)
 end
 
 local function sortInventoryFn(inven, left, right, key, order) 
+	if left == nil or left.data == nil then
+		return true
+	end
+	if right == nil or right.data == nil then
+		return false
+	end
 	if AutoCategory.BulkMode then
 		-- revert to default
 		return ZO_TableOrderingFunction(left.data, right.data, 
@@ -330,6 +337,11 @@ local function sortInventoryFn(inven, left, right, key, order)
 		end
 	end
 	
+	if key == nil or sortKeys[key] == nil then
+		-- possible fix for Arkadius' Trading Tools sort bug
+		key =  "statValue"
+	end
+
 	return ZO_TableOrderingFunction(left.data, right.data, 
 			key, sortKeys, order)
 end
