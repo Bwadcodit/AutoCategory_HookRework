@@ -1,3 +1,8 @@
+[COLOR="DeepSkyBlue"]3.6.3(90)[/COLOR]:
+[LIST]
+[*] Fixed "Collapse All" context menu option so that it collapses the categories in the inventory when selected. (Bug reported by ZoLatKam)
+[/LIST]
+
 [COLOR="DeepSkyBlue"]3.6.2(89)[/COLOR]:
 [LIST]
 [*] Fixed addon settings so that you do not get a bunch of extra (possibly missing) categories listed in the Bag Settings categories drop down menu. This error was traced down to only occurring when you do not use Account-Wide - it added them anyway. (Reported most recently by Saint-Ange.)
