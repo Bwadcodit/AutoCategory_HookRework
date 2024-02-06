@@ -66,6 +66,12 @@ local function onStackItemsTweak()
 	stackItemsTweak = true
 end
 
+local function autoSwitchToBuyBackTweak(oldState, newState)
+    if (newState == SCENE_FRAGMENT_SHOWN) and (ZO_MenuBar_GetSelectedDescriptor(ZO_StoreWindowMenuBar) == SI_STORE_MODE_SELL) then
+    	ZO_MenuBar_SelectDescriptor(ZO_StoreWindowMenuBar, SI_STORE_MODE_BUY_BACK, true)
+    end
+end
+
 local LMP = LibMediaProvider
 local SF = LibSFUtils
 local AC = AutoCategory
@@ -667,6 +673,10 @@ function AutoCategory.HookKeyboardMode()
 			
 	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, 
 			EVENT_STACKED_ALL_ITEMS_IN_BAG, onStackItems )
+
+	-- TWEAK HOOKS
+
+	STORE_MENU_FRAGMENT:RegisterCallback("StateChange", autoSwitchToBuyBackTweak)
 
 	-- AlphaGear change detection hook
 	if AG then
