@@ -4,7 +4,7 @@ AC_BAG_TYPE_GUILDBANK = 3
 AC_BAG_TYPE_CRAFTBAG = 4
 AC_BAG_TYPE_CRAFTSTATION = 5
 AC_BAG_TYPE_HOUSEBANK = 6
-
+--[[
 AC_INVEN_CV ={
 	[AC_BAG_TYPE_BACKPACK]=INVENTORY_BACKPACK,
 	[AC_BAG_TYPE_BANK]=INVENTORY_BANK,
@@ -13,12 +13,12 @@ AC_INVEN_CV ={
 	[AC_BAG_TYPE_CRAFTSTATION]=INVENTORY_BACKPACK,
 	[AC_BAG_TYPE_HOUSEBANK]=INVENTORY_HOUSE_BANK,
 }
-
+--]]
 local SF = LibSFUtils
  
 AutoCategory = {
     name = "AutoCategory",
-    version = "3.6.5",
+    version = "3.6.6",
     settingName = "AutoCategory",
     settingDisplayName = "AutoCategory - Revised",
     author = "Shadowfen, crafty35, RockingDice, Friday_the13_rus",
@@ -45,13 +45,12 @@ function AutoCategory.checkLibraryVersions()
     local vc = SF.VersionChecker(addonName)
     local logger = LibDebugLogger.Create(addonName)
     vc:Enable(logger)
-    vc:CheckVersion("LibAddonMenu-2.0", 32)
-    vc:CheckVersion("LibMediaProvider-1.0", 18)
-    vc:CheckVersion("LibSFUtils", 32)
-    vc:CheckVersion("LibDebugLogger",217)
-    vc:CheckVersion("LibSFUtils",38)
+    vc:CheckVersion("LibAddonMenu-2.0", 35)
+    vc:CheckVersion("LibMediaProvider-1.0", 27)
+    vc:CheckVersion("LibDebugLogger",263)
+    vc:CheckVersion("LibSFUtils",49)
     
     if UnknownTracker then
-        vc:CheckVersion("UnknownTracker",71)
+        vc:CheckVersion("UnknownTracker",73)
     end
 end
