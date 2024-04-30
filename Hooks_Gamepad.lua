@@ -1,6 +1,3 @@
-
-local logger = LibDebugLogger("AutoCategory")
-logger:SetEnabled(true)
 --
 -- ref to ingame/crafting/gamepad/gamepadcraftinginventory.lua
 local ZGCI = ZO_GamepadCraftingInventory
@@ -458,8 +455,7 @@ local function gci_AddFilteredDataToList(self, filteredDataTable)
         self.list:AddEntry(template, itemData)
     end
 end
- 
- 
+    
 local function gci_GenerateCraftingInventoryEntryData(self, bagId, slotIndex, stackCount, slotData)
     local itemName = GetItemName(bagId, slotIndex)
     local icon = GetItemInfo(bagId, slotIndex)
@@ -475,17 +471,11 @@ local function gci_GenerateCraftingInventoryEntryData(self, bagId, slotIndex, st
             newData.bestItemTypeName = AutoCategory.acctSaved.appearance["CATEGORY_OTHER_TEXT"]
             newData.bestItemCategoryName = AutoCategory.acctSaved.appearance["CATEGORY_OTHER_TEXT"]
             newData.sortPriorityName = string.format("%04d%s", 9999 , categoryName) 
-			logger:Error("nm bestItemTypeName = "..newData.bestItemTypeName)
-			logger:Error("nm bestItemCategoryName = "..newData.bestItemCategoryName)
-			logger:Error("nm sortPriorityName = "..newData.sortPriorityName)
 			
         else
             newData.bestItemTypeName = categoryName
             newData.bestItemCategoryName = categoryName
             newData.sortPriorityName = string.format("%04d%s", 1000 - categoryPriority , categoryName) 
-			logger:Error("m bestItemTypeName = "..newData.bestItemTypeName)
-			logger:Error("m bestItemCategoryName = "..newData.bestItemCategoryName)
-			logger:Error("m sortPriorityName = "..newData.sortPriorityName)
         end
     end
     --Auto Category Modify]
@@ -504,8 +494,6 @@ function AutoCategory.HookGamepadCraftStation()
 	ZGCI.GenerateCraftingInventoryEntryData = gci_GenerateCraftingInventoryEntryData
 --API 100021
 end
-
-
 
 function AutoCategory.HookGamepadTradeInventory() 
 	local originalFunction = ZO_GamepadTradeWindow.InitializeInventoryList	
