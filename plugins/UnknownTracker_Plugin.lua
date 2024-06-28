@@ -90,6 +90,9 @@ function AutoCategory_UnknownTracker.Initialize()
     end
     
     -- load predefinedRules
+    --AutoCategory.logger:Info("Loading pre-defines for UnknownTracker - "..#AutoCategory_UnknownTracker.predefinedRules.." into predefinedRules "..#AutoCategory.predefinedRules)
+    AutoCategory.AddPredefinedRules(AutoCategory_UnknownTracker.predefinedRules)
+    --AutoCategory.logger:Info("Finsihed loading pre-defines for UnknownTracker - "..#AutoCategory_UnknownTracker.predefinedRules.." now predefinedRules "..#AutoCategory.predefinedRules)
     AutoCategory.AddPredefinedRules(AutoCategory_UnknownTracker.predefinedRules)
 
     -- load supporting rule functions
@@ -102,6 +105,8 @@ function AutoCategory_UnknownTracker.Initialize()
 end
 
 local valid_itemtypes = {
+  [ITEMTYPE_CRAFTED_ABILITY] = true,
+  [ITEMTYPE_CRAFTED_ABILITY_SCRIPT] = true,
   [ITEMTYPE_RACIAL_STYLE_MOTIF] = true,
   [ITEMTYPE_RECIPE] = true,
   [ITEMTYPE_CONTAINER] = true,      -- problem here there are some containers we are not interested in
@@ -295,4 +300,4 @@ end
 
 
 -- Register this plugin with AutoCategory to be initialized and used when AutoCategory loads.
-AutoCategory.RegisterPlugin("UnknownTracker", AutoCategory_UnknownTracker.Initialize)
+AutoCategory.RegisterPlugin("UnknownTracker", AutoCategory_UnknownTracker.Initialize, AutoCategory_UnknownTracker.predefinedRules)

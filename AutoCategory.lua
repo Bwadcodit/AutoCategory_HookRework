@@ -5,21 +5,30 @@
 local L = GetString
 local SF = LibSFUtils
 local AC = AutoCategory
+local CVT = AC.CVT
 
+AC.rules = {}	--  [#] rule {rkey, name, tag, description, rule, pred, damaged, err}
 AutoCategory.compiledRules = SF.safeTable(AC.compiledRules)
+
+-- AC.saved contains table references from the appropriate saved variables - either acctSaved or charSaved
+-- depending on the setting of charSaved.accountWide
 AutoCategory.saved = {
-    rules = {}, -- [#] rule {name, tag, description, rule, damaged}
-    bags = {} -- [bagId] {rules{name, priority, isHidden}, isHidden}
+    rules = {}, -- [#] rule {rkey, name, tag, description, rule, damaged, err} -- obsolete
+    bags = {}, -- [bagId] {rules{name, priority, isHidden}, isOtherHidden} -- pairs with collapses
+	general = {},   -- from savedvars
+	appearance = {}, -- from savedvars
+	collapses = {},  -- from savedvars -- charSaved.collapses or acctSaved.collapses -- pairs with bags
 }
+
 AutoCategory.cache = {
     rulesByName = {}, -- [name] rule#
-    rulesByTag_svt = {}, -- [tag] {choices{rule.name}, choicesTooltips{rule.desc/name}}
+    rulesByTag_cvt = {}, -- [tag] CVT{choices{rule.name}, choicesTooltips{rule.desc/name}}
     compiledRules = AC.compiledRules, -- [name] function
     tags = {}, -- [#] tagname
-    bags_svt = {}, -- {choices{bagname}, choicesValues{bagid}, choicesTooltips{bagname}} -- for the bags themselves
+    bags_cvt = CVT:New(nil, nil, CVT.USE_VALUES + CVT.USE_TOOLTIPS), -- {choices{bagname}, choicesValues{bagid}, choicesTooltips{bagname}} -- for the bags themselves
+							-- used for both the EditBag_cvt and ImportBag dropdowns
     entriesByBag = {}, -- [bagId] {choices{ico rule.name (pri)}, choicesValues{rule.name}, choicesTooltips{rule.desc/name or missing}} --
-    entriesByName = {}, -- [bagId][rulename] {priority, isHidden}
-	collapses = {},
+    entriesByName = {}, -- [bagId][rulename]  (BagRule){ name, priority, isHidden } 
 }
 
 AutoCategory.BagRuleEntry = {}
@@ -38,28 +47,21 @@ local function getBagTypeId(header)
 	return bagTypeId
 end
 
-function AutoCategory.listcount(tbl)
-    local i = 0
-    if tbl then
-        for k, v in pairs(tbl) do
-            i = i + 1
-        end
-    end
-    return i
-end
-
 function AutoCategory.debugCache()
-    d("Saved rules: " .. #saved.rules)
-    d("Compiled rules: " .. AC.listcount(cache.compiledRules))
-    d("Rules by Name: " .. AC.listcount(cache.rulesByName))
-    d("Rules by Tag: " .. AC.listcount(cache.rulesByTag_svt))
-    d("Tags: " .. AC.listcount(cache.tags))
-    d("Saved bags: " .. #saved.bags)
-    d("Cache bags: " .. AC.listcount(cache.bags_svt))
-    d("Entries by Bag: " .. AC.listcount(cache.entriesByBag))
-    d("Entries by Name: " .. AC.listcount(cache.entriesByName))
+    d("Saved rules: " .. #saved.rules)						-- should be 0 after conversion
+    d("Predefined rules: " .. #AC.predefinedRules)			-- predefined rules from base and plugins
+    d("Combined rules: " .. #AC.rules)						-- complete list of user rules and predefined rules
+    d("Compiled rules: " .. SF.GetSize(cache.compiledRules))
+    d("Rules by Name: " .. SF.GetSize(cache.rulesByName))	-- lookup table for rules by rule name
+    d("Rules by Tag: " .. SF.GetSize(cache.rulesByTag_cvt))	-- actually returns the # of Tags defined
+    d("Tags: " .. SF.GetSize(cache.tags))					-- returns the # of Tags defined
+    d("Saved bags: " .. #saved.bags)						-- returns # of bags, collections of bagrules by bagId
+    d("Cache bags: " .. SF.GetSize(cache.bags_cvt))			-- CVT of bags for bag id dropdowns, returns 3 for CVT
+    d("Entries by Bag: " .. SF.GetSize(cache.entriesByBag))		-- CVT of bagrules by bagid, so always returns # bags
+    d("Entries by Name: " .. SF.GetSize(cache.entriesByName))	-- bagrules lookup by bagid and rule name, returns # bags
 end
 
+--unused (debug) - Not sure why called "EBT" since it uses entriesByName!!
 function AutoCategory.debugEBT()
 	for k, v in pairs(cache.entriesByName[1]) do
 		d("k = "..k)
@@ -73,41 +75,20 @@ function AutoCategory.debugEBT()
 	end
 end
 
--- -------------------------------------------------
--- Compile an individual Rule
--- Return a string that is either empty (good compile)
--- or an error string returned from the compile
---
-function AutoCategory.CompileRule(rule)
-    --local logger = LibDebugLogger("AutoCategory")
-    --logger:SetEnabled(true)
-    if rule == nil or rule.name == nil or rule.name == "" then
-		return
+function AutoCategory.debugTags()
+	d("cache.tags:")
+	for k, v in pairs(cache.tags) do
+		if type(v) == "table" then
+			for k1,v1 in pairs(v) do
+				d("k = "..k.."   k1="..k1.."  v1="..SF.str(v1))
+			end
+		else
+		    d("k = "..k.." v= "..SF.str(v))
+		end
 	end
-
-	rule.damaged = nil
-	rule.err = nil
-	AC.compiledRules[rule.name] = nil
-	if rule.rule == nil or rule.rule == "" then
-		rule.err = "Missing rule definition"
-		rule.damaged = true
-        --logger:SetEnabled(false)
-        return err
-	end
-
-    local rulestr = "return(" .. rule.rule .. ")"
-    local compiledfunc, err = zo_loadstring(rulestr)
-    if not compiledfunc then
-        rule.damaged = true
-		AC.compiledRules[rule.name] = nil
-		rule.err = err
-        --logger:SetEnabled(false)
-        return err
-    end
-    --logger:SetEnabled(false)
-    AC.compiledRules[rule.name] = compiledfunc
-    return ""
 end
+
+
 
 -- -----------------------------------------------------
 -- Compile all of the rules that we know (if necessary)
@@ -115,24 +96,17 @@ end
 --
 function AutoCategory.RecompileRules(ruleset)
 	-- reset AutoCategory.compiledRules to empty, creating only if necessary
-	AutoCategory.compiledRules = SF.safeTable(AutoCategory.compiledRules)
-	if not ZO_IsTableEmpty(AutoCategory.compiledRules) then
-		ZO_ClearTable(AutoCategory.compiledRules)
-	end
+	AutoCategory.compiledRules = SF.safeClearTable(AutoCategory.compiledRules)
 
     if ruleset == nil then
-		--logger:SetEnabled(false)
-        return
+		-- there are no rules to compile
+		return
     end
-    --local compiled = AutoCategory.compiledRules
 	-- compile and store each of the rules in the ruleset
-    for j = 1, #ruleset do
+    for j,_ in pairs(ruleset) do
         if ruleset[j] then
-            local r = ruleset[j]
-            --local n = r.name
-			-- this stores to AutoCategory.compiledRules
-			AutoCategory.CompileRule(r)
-        end
+            ruleset[j]:compile()
+		end
     end
 end
 
@@ -164,35 +138,40 @@ end
 
 -- for sorting bagged rules by priority and name
 -- returns true if the a should come before b
-local function BagDataSortingFunction(a, b)
+local function BagRuleSortingFunction(a, b)
     local result = false
-	if b == nil then return true end
-
-	-- b is not nil
-	if a == nil then return false end
-
-	-- a is not nil
+	if not (a and b and a.name and b.name and a.priority and b.priority) then return false end
     if a.priority ~= b.priority then
         result = a.priority > b.priority
 
     else
-		if a.name == nil then return false end
-		if b.name == nil then return true end
-        result = a.name < b.name
+		if type(a.name) == "table" or type(b.name) == "table" then return false end
+		result = a.name < b.name
     end
     return result
 end
 
 function AutoCategory.UpdateCurrentSavedVars()
-    -- rules, general, and appearance are always accountWide
+	AC.meta = SF.safeTable(AC.meta)
+	SF.addonMeta(AC.meta,"AutoCategory")
+	--AC.logger:Debug(SF.dTable(AC.meta, 3, "meta"))
+
+    -- general, and appearance are always accountWide
     saved.general = AutoCategory.acctSaved.general
     saved.appearance = AutoCategory.acctSaved.appearance
 
-    saved.rules = AutoCategory.acctSaved.rules
-    table.sort(saved.rules, RuleSortingFunction)
-    AutoCategory.RecompileRules(saved.rules)
+	-- AC.acctRules only has user-defined rules
+	-- AC.rules will have acctRules plus the predefined rules 
 
-	-- bags/collapses might or might not be acct wide?
+	-- assign functions to rules
+	local ruletbl = AC.rules
+	for ndx,_ in pairs(ruletbl) do
+		AC.AssociateRule(ruletbl[ndx])
+    end
+
+    AutoCategory.RecompileRules(ruletbl)
+
+	-- bags/collapses might or might not be acct wide
     if not AutoCategory.charSaved.accountWide then
         saved.bags = AutoCategory.charSaved.bags
         saved.collapses = AutoCategory.charSaved.collapses
@@ -201,115 +180,75 @@ function AutoCategory.UpdateCurrentSavedVars()
         saved.bags = AutoCategory.acctSaved.bags
         saved.collapses = AutoCategory.acctSaved.collapses
     end
+	
+	-- associate functions with bag entries
+	for i = 1, 6 do --#saved.bags do
+		local bag = saved.bags[i]
+		local rules = bag.rules
+		for j = 1, #rules do
+			AC.AssociateBagRule(rules[j])
+		end
+	end
+
 
     AC.cacheInitialize()
 end
 
 -- ----------------------------------------------------------------------------
 -- specialty Bag entry formatting functions
--- returns priority, rulename from a formatted BagRuleEntry indexValue
+-- returns priority, rulename from a formatted BagRuleEntry indexValueindexValue
 function AutoCategory.BagRuleEntry.splitValue(value)
     return string.find(value, "%((%d+)%) (%a+)")
 end
 
-function AutoCategory.BagRuleEntry.formatValue(entry)
-    return entry.name
-    --return string.format("(%04d) %s", entry.priority, entry.name )
-end
-
-function AutoCategory.BagRuleEntry.formatShow(entry, rule)
-    local sn = nil
-    if not rule then
-        -- missing rule (nil was passed in)
-        sn = string.format("|cFF4444(!)|r %s (%d)", entry.name, entry.priority)
-
-    else
-        if entry.AC_isHidden then
-            sn = string.format("|c626250%s (%d)|r", entry.name, entry.priority)
-
-        else
-            sn = string.format("%s (%d)", entry.name, entry.priority)
-        end
-    end
-    return sn
-end
-
-function AutoCategory.BagRuleEntry.formatTooltip(rule)
-    local tt = nil
-    if not rule then
-        -- missing rule (nil was passed in)
-        tt = L(SI_AC_WARNING_CATEGORY_MISSING)
-
-    else
-        tt = rule.description
-        if not tt or tt == "" then
-            tt = rule.name
-        end
-    end
-    return tt
-end
-
--- --------------------------------------------
--- Create a new Bag Entry
--- Rulename parameter is required, priority is optional.
--- If a priority is not provided, default to 1000
--- Returns a table {name=, priority=} or nil
---
-function AutoCategory.BagRuleEntry.createNew(rulename, priority)
-    if not rulename then
-        return nil
-    end
-
-    if priority == nil then
-        priority = 1000
-    end
-    return {name = rulename, priority = priority}
-end
-
 -- -----------------------------------------------------------
 -- Manage collapses
+-- -----------------------------------------------------------
 function AutoCategory.LoadCollapse()
     if not saved.general["SAVE_CATEGORY_COLLAPSE_STATUS"] then
         --init
         AutoCategory.ResetCollapse(saved)
-	--else
-	--	SF.deepCopy(AC.saved.collapses)
     end
 end
 
 function AutoCategory.ResetCollapse(vars)
-    for i = 1, #cache.bags_svt do
-		vars.collapses[i] = nil
-		cache.collapses[i] = SF.safeTable(cache.collapses[i])
-    end
+    for j = 1, #cache.bags_cvt do
+		local bagcol = vars.collapses[j]
+		for k,_ in pairs(bagcol) do
+			bagcol[k] = nil
+		end
+	end
 end
 
 -- Determine if the specified category of the particular bag is collapsed or not
 function AutoCategory.IsCategoryCollapsed(bagTypeId, categoryName)
 	if bagTypeId == nil or categoryName == nil then return false end
 
-	--collapsetbl = SF.safeTable(cache.collapses[bagTypeId])
-	collapsetbl = SF.safeTable(saved.collapses[bagTypeId])
+	local collapsetbl = SF.safeTable(saved.collapses[bagTypeId])
     return collapsetbl[categoryName] or false
 end
 
+
 function AutoCategory.SetCategoryCollapsed(bagTypeId, categoryName, collapsed)
-	cache.collapses[bagTypeId] = SF.safeTable(cache.collapses[bagTypeId])
 	if not categoryName then return end
-	cache.collapses[bagTypeId][categoryName] = collapsed
-	if collapsed == false then
-		collapsed = nil
-	end
 	saved.collapses[bagTypeId][categoryName] = collapsed
 end
 -- -----------------------------------------------------------
 
+-- will need to rebuild AC.rules after this
 function AutoCategory.ResetToDefaults()
-	AutoCategory.acctSaved.rules = SF.safeClearTable(AutoCategory.acctSaved.rules)
-    ZO_DeepTableCopy(AutoCategory.defaultAcctSettings.rules, AutoCategory.acctSaved.rules)
+	
+	AutoCategory.acctRules.rules = SF.safeClearTable(AutoCategory.acctRules.rules)
+    ZO_DeepTableCopy(AutoCategory.defaultAcctSettings.rules, AutoCategory.acctRules.rules)
+	
+	AutoCategory.acctSaved.rules = nil
+	AutoCategory.charSaved.rules = nil 
 
 	AutoCategory.acctSaved.bags = SF.safeClearTable(AutoCategory.acctSaved.bags)
     ZO_DeepTableCopy(AutoCategory.defaultAcctSettings.bags, AutoCategory.acctSaved.bags)
+	
+    AutoCategory.ResetCollapse(AutoCategory.acctSaved)
+    AutoCategory.ResetCollapse(AutoCategory.charSaved)
 
 	AutoCategory.acctSaved.appearance = SF.safeClearTable(AutoCategory.acctSaved.appearance)
     ZO_DeepTableCopy(AutoCategory.defaultAcctSettings.appearance,
@@ -319,9 +258,191 @@ function AutoCategory.ResetToDefaults()
     ZO_DeepTableCopy(AutoCategory.defaultSettings.bags, AutoCategory.charSaved.bags)
 
     AutoCategory.charSaved.accountWide = AutoCategory.defaultSettings.accountWide
+end
 
-    AutoCategory.ResetCollapse(AutoCategory.charSaved)
-    AutoCategory.ResetCollapse(AutoCategory.acctSaved)
+-- rename a rule
+function AutoCategory.renameRule(oldName, newName)
+	if oldName == newName then return end
+
+	local rule = AC.GetRuleByName(oldName)
+	if rule == nil then return end		-- no such rule to rename
+
+	local oldrndx = cache.rulesByName[oldName]
+	cache.rulesByName[oldName] = nil
+
+	newName = AC.GetUsableRuleName(newName)
+
+	rule.name = newName
+	cache.rulesByName[rule.name] = oldrndx
+
+	AutoCategory.renameBagRule(oldName, newName)
+end
+
+-- When a rule changes names, referencees to in the bag rules also need to change
+function AutoCategory.renameBagRule(oldName, newName)
+	if oldName == newName then return end
+
+	--Update bags so that every entry has the same name, should be changed to new name.
+	for i = 1, 6 do --#saved.bags do	-- for all bags
+		local bag = saved.bags[i]
+		if not bag then 
+			bag = { rules = {}, }
+			saved.bags[i] = bag
+		end
+		local rules = bag.rules
+		for j = 1, #rules do   -- for all bagrules in the bag
+			local rule = rules[j]
+			if rule.name == oldName then
+				rule.name = newName
+			end
+		end
+	end
+end
+
+-- initialize the rulesByName, rulesByTag_cvt, and the cache.tags tables from AC.rules
+function AutoCategory.cacheRuleInitialize()
+	-- initialize the rules-based lookups
+    cache.rulesByName = SF.safeClearTable(cache.rulesByName)
+    cache.rulesByTag_cvt = SF.safeClearTable(cache.rulesByTag_cvt)
+    cache.tags = SF.safeClearTable(cache.tags)
+
+	-- fill the rules-based lookups
+	local ruletbl = AC.rules
+    table.sort(ruletbl, RuleDataSortingFunction ) -- already sorted by name
+    for ndx,_ in pairs(ruletbl) do
+		-- associate rule functions with a rule struct
+		AC.AssociateRule(ruletbl[ndx])
+
+		-- add rule to rulesByName lookup
+        local rule = ruletbl[ndx]
+        local name = rule.name
+        cache.rulesByName[name] = ndx
+
+		-- ensure tag value is valid
+        local tag = rule.tag
+        if tag == "" then
+            tag = AC_EMPTY_TAG_NAME
+        end
+
+        --update tag grouping lookups
+        if not cache.rulesByTag_cvt[tag] then
+			cache.tags[#cache.tags+1] = tag
+            cache.rulesByTag_cvt[tag] = AC.CVT:New(nil,nil,CVT.USE_TOOLTIPS) -- uses choicesTooltips
+        end
+        cache.rulesByTag_cvt[tag]:append(name, name, rule:getDesc())
+    end
+
+end
+
+-- populate the entriesByName and entriesByBag lists in the cache from the saved.bags table
+function AutoCategory.cacheInitBag(bagId)
+	if bagId == nil or bagId < 1 or bagId > 6 then 
+		AC.cacheBagInitialize()
+		return
+	elseif bagId < 1 or bagId > 6 then 
+		return
+	end
+
+	-- initialize the bag-based lookups for this bag
+	cache.entriesByName[bagId] = SF.safeTable(cache.entriesByName[bagId])
+	cache.entriesByBag[bagId] = SF.safeTable(cache.entriesByBag[bagId])
+    ZO_ClearTable(cache.entriesByName[bagId])
+	--cache.entriesByBag[bagId]:clear()
+	--ZO_ClearTable(cache.entriesByBag[bagId])
+	cache.entriesByBag[bagId]  = nil
+
+	if cache.entriesByBag[bagId] == nil then
+		cache.entriesByBag[bagId] = AC.CVT:New(nil, nil, CVT.USE_VALUES + CVT.USE_TOOLTIPS)
+	end
+
+	--cache.entriesByBag[bagId].choices = SF.safeTable(cache.entriesByBag[bagId].choices)
+	--cache.entriesByBag[bagId].choicesValues = SF.safeTable(cache.entriesByBag[bagId].choicesValues)
+	--cache.entriesByBag[bagId].choicesTooltips = SF.safeTable(cache.entriesByBag[bagId].choicesTooltips)
+
+	local ename = cache.entriesByName[bagId]	-- { [name] BagRule{ name, priority, isHidden } }
+	local ebag = cache.entriesByBag[bagId]		-- CVT
+
+	-- fill the bag-based lookups
+    -- load in the bagged rules (sorted by priority high-to-low) into the dropdown
+	if saved.bags[bagId] == nil then
+		saved.bags[bagId] = {rules={}}
+	end
+	local svdbag = saved.bags[bagId]
+	table.sort(svdbag.rules, BagRuleSortingFunction)
+
+	for entry = 1, #svdbag.rules do
+		local bagrule = svdbag.rules[entry] -- BagRule {name, priority, isHidden}
+		if not bagrule then break end
+		AC.AssociateBagRule(bagrule)
+
+		local ruleName = bagrule.name
+		--AC.logger:Debug("bagrule.name "..tostring(bagrule.name))
+		if not ename[ruleName] then
+			ename[ruleName] = bagrule
+			ebag.choicesValues[#ebag.choicesValues+1] = bagrule:formatValue()
+
+			local sn = bagrule:formatShow()
+			local tt = bagrule:formatTooltip()
+			ebag.choices[#ebag.choices+1] = sn
+			ebag.choicesTooltips[#ebag.choicesTooltips+1] = tt
+		end
+	end
+end
+
+
+-- populate the entriesByName and entriesByBag lists in the cache from the saved.bags table
+function AutoCategory.cacheBagInitialize()
+	-- initialize the bag-based lookups
+    ZO_ClearTable(cache.entriesByName)
+    ZO_ClearTable(cache.entriesByBag)
+
+	-- fill the bag-based lookups
+    -- load in the bagged rules (sorted by priority high-to-low) into the dropdown
+    for bagId = 1, 6 do --#saved.bags do
+		AutoCategory.cacheInitBag(bagId)
+		--[[
+		if cache.entriesByBag[bagId] == nil then
+			cache.entriesByBag[bagId] = AC.CVT:New(nil,nil,CVT.USE_VALUES + CVT.USE_TOOLTIPS)
+		end
+
+		cache.entriesByName[bagId] = SF.safeTable(cache.entriesByName[bagId])
+
+        local ename = cache.entriesByName[bagId]	-- { [name] BagRule{ name, priority, isHidden } }
+        local ebag = cache.entriesByBag[bagId]		-- CVT
+
+		if saved.bags[bagId] == nil then
+			saved.bags[bagId] = {rules={}}
+		end
+		local svdbag = saved.bags[bagId]
+        table.sort(svdbag.rules, BagRuleSortingFunction)
+
+        for entry = 1, #svdbag.rules do
+            local bagrule = svdbag.rules[entry] -- BagRule {name, priority, isHidden}
+			if not bagrule then break end
+			AC.AssociateBagRule(bagrule)
+
+			if bagrule.name then
+				local ruleName = bagrule.name
+				if not ename[ruleName] then
+					ename[ruleName] = bagrule
+					if ebag.choicesValues then
+						ebag.choicesValues[#ebag.choicesValues+1] = bagrule:formatValue()
+						--table.insert(ebag.choicesValues, bagrule:formatValue())
+					end
+
+					local sn = bagrule:formatShow()
+					local tt = bagrule:formatTooltip()
+					ebag.choices[#ebag.choices+1] = sn
+					--table.insert(ebag.choices, sn)
+					if ebag.choicesTooltips then
+						ebag.choicesTooltips[#ebag.choicesTooltips+1] = tt
+						--table.insert(ebag.choicesTooltips, tt)
+					end
+				end
+			end
+        end
+		--]]
+    end
 end
 
 -- ----------------------------------------------------
@@ -329,71 +450,11 @@ end
 -- some or all of the cache tables need (re)initializing
 --
 function AutoCategory.cacheInitialize()
-    -- initialize the rules-based lookups
-    cache.rulesByName = SF.safeClearTable(cache.rulesByName)
-    cache.rulesByTag_svt = SF.safeClearTable(cache.rulesByTag_svt)
-    cache.tags = SF.safeClearTable(cache.tags)
-    --table.sort(saved.rules, RuleDataSortingFunction ) -- already sorted by name
-    for ndx = 1, #saved.rules do
-        local rule = saved.rules[ndx]
-        local name = rule.name
-        cache.rulesByName[name] = ndx
-
-        local tag = rule.tag
-        if tag == "" then
-            tag = AC_EMPTY_TAG_NAME
-        end
-        --update cache for tag grouping
-        if not cache.rulesByTag_svt[tag] then
-            table.insert(cache.tags, tag)
-            cache.rulesByTag_svt[tag] = {choices = {}, choicesValues = {}, choicesTooltips = {}}
-        end
-        local tooltip = rule.description
-        if rule.description == "" then
-            tooltip = rule.name
-        end
-        table.insert(cache.rulesByTag_svt[tag].choices, name)
-        table.insert(cache.rulesByTag_svt[tag].choicesValues, name)
-        table.insert(cache.rulesByTag_svt[tag].choicesTooltips, tooltip)
-    end
-
-    -- initialize the bag-based lookups
-    ZO_ClearTable(cache.entriesByName)
-    ZO_ClearTable(cache.entriesByBag)
-    -- load in the bagged rules (sorted by priority high-to-low)
-    for bagId = 1, #saved.bags do
-		if cache.entriesByBag[bagId] == nil then
-			cache.entriesByBag[bagId] = {choices = {}, choicesValues = {}, choicesTooltips = {}}
-		end
-
-		cache.entriesByName[bagId] = SF.safeTable(cache.entriesByName[bagId])
-        local ename = cache.entriesByName[bagId]
-        local ebag = cache.entriesByBag[bagId]
-
-		if saved.bags[bagId] == nil then
-			saved.bags[bagId] = {rules={}}
-		end
-		local svdbag = saved.bags[bagId]
-        table.sort(svdbag.rules, BagDataSortingFunction)
-        for entry = 1, #svdbag.rules do
-            local data = svdbag.rules[entry] -- data equals {name, priority}
-
-            local ruleName = data.name
-            ename[ruleName] = data
-            table.insert(ebag.choicesValues, AC.BagRuleEntry.formatValue(data))
-
-            local rule = AC.GetRuleByName(ruleName)
-            local sn = AC.BagRuleEntry.formatShow(data, rule)
-            local tt = AC.BagRuleEntry.formatTooltip(rule)
-            table.insert(ebag.choices, sn)
-            table.insert(ebag.choicesTooltips, tt)
-        end
-    end
-
-    cache.collapses = SF.safeClearTable(cache.collapses)
-
+	AutoCategory.cacheRuleInitialize()
+	AutoCategory.cacheBagInitialize()
 end
 
+-- find and return the rule referenced by name
 function AutoCategory.GetRuleByName(name)
     if not name then
         return nil
@@ -404,66 +465,63 @@ function AutoCategory.GetRuleByName(name)
         return nil
     end
 
-    return saved.rules[ndx]
+	return AC.rules[ndx]
 end
 
-function AutoCategory.cache.RemoveRuleFromBag(bagId, name)
-    if not name then
+-- remove bagrule (referenced by rulename) from a bag
+function AutoCategory.cache.RemoveRuleFromBag(bagId, rulename)
+    if not rulename then
         return
     end
 
-    -- remove from entriesByBag
-    local r = cache.entriesByBag[bagId]
-    for i = 1, #r.choicesValues do
-        local p, n = AutoCategory.BagRuleEntry.splitValue(r.choicesValues[i])
-        if n == name then
-            table.remove(r.choicesValues, i)
-            table.remove(r.choices, i)
-            table.remove(r.choicesTooltips, i)
+    -- remove from entriesByBag (CVT)
+	local removeIndex = -1
+	local r = cache.entriesByBag[bagId]
+    for i = #r.choices, 1, -1 do
+        local _, n = AutoCategory.BagRuleEntry.splitValue(r.choicesValues[i])
+        if n == rulename then
+			--r.dirty = 1		-- does not have associated control
+			removeIndex = i
+            table.remove(r.choices, removeIndex)
+			if r.choicesValues then
+				table.remove(r.choicesValues, removeIndex)
+			end
+			if r.choicesTooltips then
+				table.remove(r.choicesTooltips, removeIndex)
+			end
             break
         end
     end
-    -- remove from entriesByName
-    cache.entriesByName[bagId][name] = nil
+
+    -- remove from collapses
+	cache.entriesByName[bagId][rulename] = nil
+
+	-- remove from collapse bag
+	local collapsebag = saved.collapses[bagId]
+	local tname = rulename.." %("
+	for k,_ in pairs(collapsebag) do
+
+		if k == rulename then
+			collapsebag[k] = nil
+
+		elseif 1 == string.find(k,tname) then
+			collapsebag[k] = nil
+		end
+	end
+
     -- removed from saved.bags
-    for i = 1, #saved.bags[bagId] do
-        if saved.bags[bagId][i].name == name then
-            saved.bags[bagId][i] = nil
+	local bagrules = saved.bags[bagId].rules
+    for i = #bagrules, 1, -1 do
+		if bagrules[i].name == rulename then
+			table.remove(bagrules[i])
             break
         end
     end
+	
 end
 
-function AutoCategory.cache.RemoveRuleByName(name)
-    if not name then return end
-    if not cache.rulesByName[name] then return end
-
-    local ndx = cache.rulesByName[name]
-    cache.compiledRules[name] = nil
-    cache.rulesByName[name] = nil
-
-    -- remove from cache.rulesByTag_svt
-    for t, s in pairs(cache.rulesByTag_svt) do
-        for i = 1, #s.choices do
-            if s.choices[i] == name then
-                table.remove(s.choices, i)
-                if s.choicesValues then
-                    table.remove(s.choicesValues, i)
-                end
-                if s.choicesTooltips then
-                    table.remove(s.choicesTooltips, i)
-                end
-                break
-            end
-        end
-    end
-
-    -- remove from entriesByBag
-    for b, r in pairs(cache.entriesByBag) do
-        AutoCategory.cache.RemoveRuleFromBag(b, name)
-    end
-end
-
+-- check that all required fields are set and rule is already compiled (optional)
+-- returns err (t/f), errmsg (string)
 function AutoCategory.isValidRule(ruledef)
     --make sure rule is well-formed
 	-- validate rule name
@@ -473,6 +531,7 @@ function AutoCategory.isValidRule(ruledef)
     end
 	-- validate rule text
     if (not ruledef.rule or type(ruledef.rule) ~= "string" or ruledef.rule == "") then
+		ruledef.error = true
         return false, "rule text is required"
     end
 	-- validate optional rule description
@@ -488,165 +547,384 @@ function AutoCategory.isValidRule(ruledef)
         end
     end
 	-- validate compiled rule function if available
-    if ruledef.compiled then -- compiled is optional
-        if (type(ruledef.compiled) ~= "function") then
-            return false, "non-nil compiled must be a lua function"
+	local compiled = AutoCategory.compiledRules[ruledef.name]
+    if compiled then -- compiled is optional
+        if (type(compiled) ~= "function") then
+			ruledef.setError(true, "non-nil compiled must be a lua function")
+			AutoCategory.compiledRules[ruledef.name] = nil
+            return false, ruledef.err
         end
     end
     return true
 end
 
--- when we add a new rule to saved.rules, also add it to the various lookups and dropdowns
+-- when we add a new rule to AC.rules, also add it to the various lookups and dropdowns
+-- returns nil on success or error message
 function AutoCategory.cache.AddRule(rule)
     if not rule or not rule.name then
         return "AddRule: Rule or name of rule was nil"
     end -- can't use a nil rule
+	
+	AC.AssociateRule(rule)
 
-    local tt = rule.description
-    if not tt or tt == "" then
-        tt = rule.name
-    end
-    if not rule.tag or rule.tag == "" then
+	if not rule.tag or rule.tag == "" then
         rule.tag = AC_EMPTY_TAG_NAME
     end
-    if cache.rulesByTag_svt[rule.tag] == nil then
-        cache.rulesByTag_svt[rule.tag] = {choices = {}, choicesValues = {}, choicesTooltips = {}}
+	
+    if cache.rulesByTag_cvt[rule.tag] == nil then
+        cache.rulesByTag_cvt[rule.tag] = CVT:New(nil, nil, CVT.USE_TOOLTIPS) -- uses choicesTooltips
     end
 
 	local rule_ndx = cache.rulesByName[rule.name]
     if rule_ndx then
 		-- rule already exists
-		saved.rules[rule_ndx] = rule
-        --return "AddRule: Rule (" .. rule.name .. ") already exists. Ignoring"
-
+		-- save overwritten rule??
+		
+		-- overwrite rule with new one
+		--AC.rules[rule_ndx] = rule
+     
 	else
 		-- add the new rule
-		table.insert(saved.rules, rule)
-		rule_ndx = #saved.rules
+		if rule.pred and rule.pred == 1 then 
+			--table.insert(AC.predefinedRules, rule) 
+			
+		else
+			AC.acctRules.rules[#AC.acctRules.rules+1] = rule
+			--table.insert(AC.acctRules.rules, rule)
+		end
+		AC.rules[#AC.rules+1] = rule
+		--table.insert(AC.rules, rule)
+		rule_ndx = #AC.rules
 		cache.rulesByName[rule.name] = rule_ndx
 
-		table.insert(cache.rulesByTag_svt[rule.tag].choices, rule.name)
-		table.insert(cache.rulesByTag_svt[rule.tag].choicesValues, rule.name)
-		table.insert(cache.rulesByTag_svt[rule.tag].choicesTooltips, tt)
+		cache.rulesByTag_cvt[rule.tag]:append(rule.name, nil, rule:getDesc()) --rule.name, rule:getDesc())
     end
 
-    AC.CompileRule(rule)
+	rule:compile()
 end
 
-function AutoCategory.cache.AddRuleToBag(bagId, rulename, priority)
-    local entry = {name = rulename, priority = priority}
 
-    saved.bags[bagId] = SF.safeTable(saved.bags[bagId])
-    cache.entriesByName[bagId] = SF.safeTable(cache.entriesByName[bagId])
-    if not cache.entriesByName[bagId][rulename] then
-        table.insert(saved.bags[bagId], entry)
-    end
-
-    local rule = saved.rules[cache.rulesByName[rulename]]
-
-    cache.entriesByName[bagId][rulename] = entry
-
-    local sn = AutoCategory.BagRuleEntry.formatShow(entry, rule)
-    local tt = AutoCategory.BagRuleEntry.formatTooltip(rule)
-
-	if cache.entriesByBag[bagId] == nil then
-		cache.entriesByBag[bagId] = {choices = {}, choicesValues = {}, choicesTooltips = {}}
+-- Set up the context menu item for AutoCategory
+local LCM = LibCustomMenu
+local function setupContextMenu()
+	
+	local function AC_GetItem(rowControl) 
+		local bagId, slotIndex = ZO_Inventory_GetBagAndIndex(rowControl)
+		local itemId = GetItemId(bagId, slotIndex)
+		local name = GetItemName(bagId, slotIndex)
+		d("[AC] "..tostring(name).."   itemId = "..tostring(itemId))
 	end
-    table.insert(cache.entriesByBag[bagId].choices, sn)
-    table.insert(cache.entriesByBag[bagId].choicesValues, rulename)
-    table.insert(cache.entriesByBag[bagId].choicesTooltips, tt)
-end
-
---remove duplicated categories in bag
-function AutoCategory.removeDuplicatedRules()
-    for i = 1, #saved.bags do
-        local bag = saved.bags[i]
-        local keys = {}
-        --traverse from back to front to remove elements while iteration
-        for j = #bag.rules, 1, -1 do
-            local data = bag.rules[j]
-            if keys[data.name] ~= nil then
-                --remove duplicated category
-                --d("removed (" .. j .. ") " .. data.name)
-                table.remove(saved.bags[i].rules, j)
-
-            else
-                --flag this category
-                keys[data.name] = true
-            end
-        end
-    end
+	local function AC_AddMenuItem(rowControl, slotActions)
+		AddCustomMenuItem("AC: Get itemId", function() AC_GetItem(rowControl) end, MENU_ADD_OPTION_LABEL)
+		  --Show the context menu entries at the inventory row now
+		  ShowMenu(rowControl)
+	end
+	LCM:RegisterContextMenu(AC_AddMenuItem, LibCustomMenu.CATEGORY_LATE )
 end
 
 function AutoCategory.LazyInit()
     if not AutoCategory.Inited then
         AutoCategory.Inited = true
 
-		local logger = LibDebugLogger("AutoCategory")
-		logger:SetEnabled(true)
-
         -- initialize plugins
-        for name, initfunc in pairs(AutoCategory.Plugins) do
-            if initfunc then
-                initfunc()
+        for _, v in pairs(AutoCategory.Plugins) do
+            if v.init then
+                v.init()
             end
         end
 
         AutoCategory.AddonMenuInit()
-		AutoCategory.RecompileRules(saved.rules)
-
+		AutoCategory.RecompileRules(AC.rules)
+		
+		-- Set up the context menu item for AutoCategory
+		setupContextMenu()
+		
         -- hooks
         AutoCategory.HookGamepadMode()
         AutoCategory.HookKeyboardMode()
 
-        --capabilities with other add-ons
+        --capabilities with other (older) add-ons
         IntegrateQuickMenu()
-		logger:SetEnabled(false)
     end
 end
 
+-- Add the rules in a table of rules to the combined, acctRules, and predefinedRules lists
+-- as appropriate.
+-- The table must be { rules = {} } and tbl.rules contains the list of rules.
+--
+-- The tblname is used only for logger messages - i.e. debugging.
+--
+-- If notdel is true then the rules are NOT removed from the source table.
+-- The ispredef flag signals that ALL of the rules in the source table are predefines if true.
+--
+local function addTableRules(tbl, tblname, notdel, ispredef)
+	if not tbl.rules or tbl.rules == AC.rules then return end
+
+	--AC.logger:Info("Adding rules from table "..(tblname or "unknown").."  count = "..#tbl.rules)
+	local newName
+
+	-- add a rule to the combined rules list and the name-lookup
+	local function addCombinedRule(rl)
+		AC.rules[#AC.rules+1] = rl
+		--table.insert(AC.rules, rl)
+		--AC.logger:Info("Adding rule "..rl.name.." to AC.rules ndx="..#AC.rules)
+		cache.rulesByName[rl.name] = #AC.rules
+	end
+
+	-- process all of the rules in the table
+	local v, r
+	for k=#tbl.rules, 1, -1 do
+		v = tbl.rules[k]
+		--.logger:Info((tblname or "unknown").." "..k..". "..v.name)
+		--if not notdel then
+		--	table.remove(tbl.rules, k)
+		--end
+		if ispredef == true then
+			v.pred=1
+		end
+
+		r = AC.GetRuleByName(v.name)
+		if r then
+			--AC.logger:Warn("Found duplicate rule name - "..v.name)
+			-- already have one
+			if v.rule == r.rule then
+				-- same rule, so don't add it again
+				--AC.logger:Warn("1 Dropped duplicate rule - "..v.name.."  from AC.rules sourced "..(tblname or "unknown"))
+
+			else
+				local oldname = v.name
+				-- rename different rule
+				newName = AC.GetUsableRuleName(v.name)
+				v.name = newName
+
+				addCombinedRule(v)
+				AC.renameBagRule(oldname, newName)
+				if (v.pred and v.pred == 1) or ispredef then 
+					-- add to predefinedRules
+					if tbl.rules ~= AC.predefinedRules then
+						AC.predefinedRules[#AC.predefinedRules+1] = v
+						--table.insert(AC.predefinedRules, v) 
+					end
+
+				else
+					-- add to acctRules
+					if tbl.rules ~= AC.acctRules.rules then
+						AC.acctRules.rules[#AC.acctRules.rules+1] = v
+						--table.insert(AC.acctRules.rules, v)
+					end
+				end
+				-- add to input table (if notdel == true)
+				if notdel == true then
+				    --table.remove(tbl.rules, k)
+					tbl.rules[k] = v
+				end
+			end
+
+		else
+			-- brand new (never seen) rule
+			if (v.pred and v.pred == 1) or ispredef then 
+				-- it's a predefined rule
+				if tbl.rules ~= AC.predefinedRules then
+					AC.predefinedRules[#AC.predefinedRules+1] = v
+					--table.insert(AC.predefinedRules, v) 
+				end
+
+		    else
+				-- it's a user rule
+			    if tbl.rules ~= AC.acctRules.rules then
+					AC.acctRules.rules[#AC.acctRules.rules+1] = v
+					--table.insert(AC.acctRules.rules, v)
+			    end
+			end
+			-- add it to the combined (AC.rule) list
+			addCombinedRule(v)
+        end
+    end
+end
+	
+-- setup that needs to be done when the addon is loaded into the game
 function AutoCategory.onLoad(event, addon)
     if addon ~= AutoCategory.name then
         return
     end
 
-    EVENT_MANAGER:UnregisterForEvent(AutoCategory.name, EVENT_ADD_ON_LOADED)
+	-- make sure we are not called again
+	AC.evtmgr:unregEvt(EVENT_ADD_ON_LOADED)
 
-    AutoCategory.checkLibraryVersions()
+    AC.checkLibraryVersions()
 
-    -- load our saved variables
+    -- load our saved variables (no longer loads pre-defined rules)
     AC.acctSaved, AC.charSaved = SF.getAllSavedVars("AutoCategorySavedVars",
 		1.1, AC.defaultAcctSettings, AC.defaultCharSettings)
+	
+	-- There are no char-level variables for AutoCatRules!
+    AC.acctRules  = SF.getAcctSavedVars("AutoCatRules", 1.1, AutoCategory.default_rules)
+	SF.defaultMissing(AC.acctRules, AutoCategory.default_rules)
 
-    -- init bag category table only when the bag defs is missing
-    for k, v in pairs(AC.defaultAcctBagSettings.bags) do
-        if AC.acctSaved.bags[k] then
-            if not AC.acctSaved.bags[k].rules or #AC.acctSaved.bags[k].rules == 0 then
-                AC.acctSaved.bags[k] = v
-            end
 
-        else
-            AC.acctSaved.bags[k] = v
-        end
-    end
+	if not AC.charSaved.colld then
+		AC.charSaved.colld =  true
+		AC.ResetCollapse(AC.acctSaved)
+		AC.ResetCollapse(AC.charSaved)
+	end
+	
+	if not AC.charSaved.accountWide then
+		AC.charSaved.accountWide = true
+	end
 
-    AutoCategory.UpdateCurrentSavedVars()
-    AutoCategory.LoadCollapse()		-- must follow UpdateCurrentSavedVars()
+	AC.acctSaved.bags = SF.safeTable(AC.acctSaved.bags)
+	if SF.isEmpty(AC.acctSaved.bags[AC_BAG_TYPE_BACKPACK].rules) then
+		SF.defaultMissing(AC.acctSaved.bags, AutoCategory.defaultAcctBagSettings.bags)
+	end
 
-    AutoCategory.LazyInit()
+	AC.charSaved.bags = SF.safeTable(AC.charSaved.bags)
+	if SF.isEmpty(AC.charSaved.bags[AC_BAG_TYPE_BACKPACK].rules) then
+		SF.defaultMissing(AC.charSaved.bags, AutoCategory.defaultAcctBagSettings.bags)
+	end
+-- init bag category table only when the bag defs is missing/empty
+	if AC.charSaved.accountWide == true then
+		-- check acctSaved
+		AC.acctSaved.bags = SF.safeTable(AC.acctSaved.bags)
+		if SF.isEmpty(AC.acctSaved.bags[AC_BAG_TYPE_BACKPACK].rules) then
+			AC.ResetCollapse(AC.acctSaved)
+		end
+
+	else
+		-- check charSaved
+		AC.charSaved.bags = SF.safeTable(AC.charSaved.bags)
+		if SF.isEmpty(AC.charSaved.bags) then
+			AC.ResetCollapse(AC.charSaved)
+		end
+	end
 
 end
 
+-- --------------------------------------------------------------------
+-- keep track of registered events for AutoCategory
+AC.evtmgr = SF.EvtMgr:New("AutoCategory")
+
+-- only runs once
+-- continues initialization after all addons are loaded into the game
 function AutoCategory.onPlayerActivated()
-    EVENT_MANAGER:UnregisterForEvent(AutoCategory.name, EVENT_PLAYER_ACTIVATED)
-	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_CLOSE_GUILD_BANK, function () AC.BulkMode = false end)
-	EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_CLOSE_BANK, function () AC.BulkMode = false end)
+	local evtmgr = AC.evtmgr
 
+	-- make sure we are only called once
+	evtmgr:unregEvt(EVENT_PLAYER_ACTIVATED)
+
+	evtmgr:registerEvt(EVENT_CLOSE_GUILD_BANK, function () AC.BulkMode = false end)
+	evtmgr:registerEvt(EVENT_CLOSE_BANK, function () AC.BulkMode = false end)
+
+	-- combine the user-defined and pre-defined into a single set for use
+	AC.rules = SF.safeClearTable(AutoCategory.rules) -- start empty
+
+	-- add pre-defined rules first to the combined rules and name-lookup
+	local pred = { rules = AC.predefinedRules, }
+	addTableRules(pred, "AC.predefinedRules", true, true)
+	--AC.logger:Debug("2 predefined "..SF.GetSize(AC.predefinedRules))
+
+	-- add plugin predefined rules to the combined rules and name-lookup
+	for name, v in pairs(AutoCategory.Plugins) do
+		AC.logger:Debug("plugin: "..name)
+		if v.predef then
+			AC.logger:Debug ("Processing predefs from".. name.." "..SF.GetSize(v.predef))
+			local pred = { rules = v.predef, }
+			addTableRules(pred, name..".predefinedRules", true, true)
+		end
+	end
+	--AC.logger:Debug("2.5 predefined "..SF.GetSize(AC.predefinedRules))
+
+	-- load lookup for predefines
+	local lpred = {}
+	for k, v in pairs(AC.predefinedRules) do
+		if lpred[v.name] then
+			--AC.logger:Info("Found duplicate predefine: "..v.name.." ("..k..") - original k = "..lpred[v.name])
+
+		else
+			lpred[v.name] = k
+		end
+	end
+	--AC.logger:Debug("2 lpred "..SF.GetSize(lpred))
+
+	-- debug output function to display rule tables in log
+	local function printRuleTbl(tbl, tblname)
+		for k,v in pairs(tbl) do
+			AC.logger:Debug(tblname.."["..k.."] = "..v.name)
+		end
+
+	end
+
+	-- remove predefines from the passed-in table
+	--     note: tblname is only used for logger messages.
+	local function pruneTables(tbl, tblname)
+		if not tbl or SF.GetSize(tbl) == 0 then return end
+
+		local v
+		for k=#tbl,1, -1 do
+			v= tbl[k]
+			if lpred[v.name] then
+				-- delete dupe
+				--AC.logger:Warn("Deleting pre-def from acctSaved.rules: "..v.name)
+				table.remove(tbl, k)
+			end
+		end
+		--AC.logger:Info(tblname.." # went from "..asv.." to "..SF.GetSize(tbl)) -- count that we end with
+		--printRuleTbl(tbl,tblname)
+
+	end
+
+	if not AC.charSaved.nep then
+		-- prune pre-defines from acctSaved
+		if AC.acctSaved.rules and #AC.acctSaved.rules > 0 then
+			pruneTables(AC.acctSaved.rules, "acctSaved.rules")
+		end
+
+		-- prune pre-defines from charSaved
+		if AC.charSaved.rules and #AC.charSaved.rules > 0 then
+			pruneTables(AC.charSaved.rules, "charSaved.rules")
+		end
+	end
+
+	-- add user-defined rules next
+	addTableRules(AC.acctRules, "AC.acctRules.rules", true)	-- "real" user-defined rules, do not delete rules from AC.acctRules table
+	if not AC.charSaved.nep then
+		addTableRules(AC.acctSaved, "AC.acctSaved.rules")		-- old acct-wide combo rules
+		AC.acctSaved.rules = nil
+		addTableRules(AC.charSaved, "AC.charSaved.rules")		-- old char combo rules
+		AC.charSaved.rules = nil
+	end
+
+	-- cannot use printRuleTbl() because this is NOT a table of rules
+	--for k,v in pairs(lpred) do
+	--    AC.logger:Debug("lpredrules["..k.."] = "..v)
+	--end
+
+
+	--printRuleTbl(AC.rules, "combrules")
+	--printRuleTbl(AC.acctRules.rules,"acctRules.rules")
+
+	--AC.logger:Debug("lpred "..#lpred)
+	--AC.logger:Debug("3 predefined "..SF.GetSize(AC.predefinedRules))
+	--AC.logger:Debug ("3 acctSaved "..SF.GetSize(AC.acctSaved.rules))
+	--AC.logger:Debug ("3 charSaved "..SF.GetSize(AC.charSaved.rules))
+	--AC.logger:Debug ("3 rules "..SF.GetSize(AC.rules))
+	--AC.logger:Debug ("3 acctRules "..SF.GetSize(AC.acctRules.rules))
+
+	if AC.charSaved.nep == nil then
+		AC.charSaved.nep = 1
+	end
+
+    AC.UpdateCurrentSavedVars()
+    AC.LoadCollapse()		-- must follow UpdateCurrentSavedVars()
+
+    AC.LazyInit()	-- also loads in predefines for plugins
 end
 
--- register our event handler function to be called to do initialization
-EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_ADD_ON_LOADED, AutoCategory.onLoad)
-EVENT_MANAGER:RegisterForEvent(AutoCategory.name, EVENT_PLAYER_ACTIVATED, AutoCategory.onPlayerActivated)
+do
+	-- register our event handler function to be called to do initialization
+	AC.evtmgr:registerEvt(EVENT_ADD_ON_LOADED, 		AutoCategory.onLoad)
+	AC.evtmgr:registerEvt(EVENT_PLAYER_ACTIVATED, 	AutoCategory.onPlayerActivated)
+end
+
 
 --== Interface ==--
 local AC_DECON = 880
@@ -691,7 +969,6 @@ local inven_data = {
 	[UV_DECON] = {
 		object = UNIVERSAL_DECONSTRUCTION.deconstructionPanel.inventory,
 		control = UNIVERSAL_DECONSTRUCTION.deconstructionPanel.control,
-		--ZO_UniversalDeconstructionPanel_Keyboard
 	},
 }
 
@@ -740,7 +1017,7 @@ function AutoCategory.RefreshCurrentList(even_if_hidden)
 	RefreshList(UV_DECON, even_if_hidden)
 end
 
-
+-- called from AutoCategory.xml
 function AC_ItemRowHeader_OnMouseEnter(header)
     local cateName = header.slot.dataEntry.data.AC_categoryName
     local bagTypeId = getBagTypeId(header)
@@ -763,11 +1040,13 @@ function AC_ItemRowHeader_OnMouseEnter(header)
     end
 end
 
+-- called from AutoCategory.xml
 function AC_ItemRowHeader_OnMouseExit(header)
     local markerBG = header:GetNamedChild("CollapseMarkerBG")
     markerBG:SetHidden(true)
 end
 
+-- called from AutoCategory.xml
 function AC_ItemRowHeader_OnMouseClicked(header)
     if (AutoCategory.acctSaved.general["SHOW_CATEGORY_COLLAPSE_ICON"] == false) then
         return
@@ -781,11 +1060,13 @@ function AC_ItemRowHeader_OnMouseClicked(header)
     AutoCategory.RefreshCurrentList()
 end
 
+-- called from AutoCategory.xml
 function AC_ItemRowHeader_OnShowContextMenu(header)
     ClearMenu()
     local cateName = header.slot.dataEntry.data.AC_categoryName
     local bagTypeId = getBagTypeId(header)
 
+	-- add either single Expand or Collapse to menu as appropriate for category state
     local collapsed = AutoCategory.IsCategoryCollapsed(bagTypeId, cateName)
     if collapsed then
         AddMenuItem(
@@ -805,28 +1086,33 @@ function AC_ItemRowHeader_OnShowContextMenu(header)
             end
         )
     end
+	
+	-- add Expand All to menu
     AddMenuItem(
         L(SI_CONTEXT_MENU_EXPAND_ALL),
         function()
-            for k, v in pairs(AutoCategory.cache.collapses[bagTypeId]) do
-                AC.SetCategoryCollapsed(bagTypeId,k,false)
+            for k, _ in pairs(saved.collapses[bagTypeId]) do
+				AutoCategory.SetCategoryCollapsed(bagTypeId,k,false)
             end
             AutoCategory.RefreshCurrentList()
         end
     )
+
+	-- add Collapse All to menu
     AddMenuItem(
         L(SI_CONTEXT_MENU_COLLAPSE_ALL),
         function()
-            for k, v in pairs(AutoCategory.cache.collapses[bagTypeId]) do
-                AC.SetCategoryCollapsed(bagTypeId,k,true)
+            for k, _ in pairs(saved.collapses[bagTypeId]) do
+				AutoCategory.SetCategoryCollapsed(bagTypeId,k,true)
             end
-			AC.SetCategoryCollapsed(bagTypeId,saved.appearance["CATEGORY_OTHER_TEXT"],true)
+			AutoCategory.SetCategoryCollapsed(bagTypeId,saved.appearance["CATEGORY_OTHER_TEXT"],true)
             AutoCategory.RefreshCurrentList()
         end
     )
     ShowMenu()
 end
 
+-- called from binding.xml
 function AC_Binding_ToggleCategorize()
     AutoCategory.Enabled = not AutoCategory.Enabled
     if AutoCategory.acctSaved.general["SHOW_MESSAGE_WHEN_TOGGLE"] then

@@ -226,18 +226,23 @@ function AutoCategory_Iakoni.LoadLanguage(defaultlang)
     AutoCategory.LoadLanguage(localization_strings,"en")
 end
 
-function AutoCategory_Iakoni.Initialize()
+function AutoCategory_Iakoni.Initialize(loadpred)
 	if not GearChangerByIakoni then
         AutoCategory.AddRuleFunc("setindex", AutoCategory.dummyRuleFunc)
         AutoCategory.AddRuleFunc("inset", AutoCategory.dummyRuleFunc)
         return
     end
     
+	AutoCategory.logger:Warn("Initializing Iakoni Gear Changer plugin integration")
     -- reinitialize strings
     AutoCategory.LoadLanguage(localization_strings,"en")
     
     -- load predefinedRules
-    AutoCategory.AddPredefinedRules(AutoCategory_Iakoni.predefinedRules)
+	--if loadpred then
+		AutoCategory.logger:Info("Loading pre-defines for Iakoni Gear Changer - "..#AutoCategory_Iakoni.predefinedRules.." into predefinedRules "..#AutoCategory.predefinedRules)
+		AutoCategory.AddPredefinedRules(AutoCategory_Iakoni.predefinedRules)
+		AutoCategory.logger:Info("Finsihed loading pre-defines for Iakoni Gear Changer - "..#AutoCategory_Iakoni.predefinedRules.." now predefinedRules "..#AutoCategory.predefinedRules)
+	--end
     
     -- load supporting rule functions
     AutoCategory.AddRuleFunc("setindex", AutoCategory_Iakoni.RuleFunc.SetIndex)
@@ -260,7 +265,8 @@ local function IokaniGearChanger_GetGearSet(bagId, slotIndex)
 					for _,u in pairs(GearChangerByIakoni.WornArray) do
 						if itemID==a[i][u] then
 							--find gear in set i
-							table.insert(result, i)
+                            result[#result+1] = i
+							--table.insert(result, i)
 						end
 					end
 				end
@@ -318,4 +324,4 @@ function AutoCategory_Iakoni.RuleFunc.InSet( ... )
 end
 
 
-AutoCategory.RegisterPlugin("IakoniGearChanger", AutoCategory_Iakoni.Initialize)
+AutoCategory.RegisterPlugin("IakoniGearChanger", AutoCategory_Iakoni.Initialize, AutoCategory_Iakoni.predefinedRules)

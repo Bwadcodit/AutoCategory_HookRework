@@ -111,6 +111,11 @@ local specializedItemTypeMap = {
 	["recipe_provisioning_standard_food"] = SPECIALIZED_ITEMTYPE_RECIPE_PROVISIONING_STANDARD_FOOD,
 	["recipe_woodworking_blueprint_furnishing"] = 
 		SPECIALIZED_ITEMTYPE_RECIPE_WOODWORKING_BLUEPRINT_FURNISHING,
+	["script"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY,
+	["script_focus"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_PRIMARY,
+	["script_signature"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_SECONDARY,
+	["script_affix"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_TERTIARY,
+	["scribing ink"] = SPECIALIZED_ITEMTYPE_SCRIBING_INK,
 	["siege_ballista"] = SPECIALIZED_ITEMTYPE_SIEGE_BALLISTA,
 	["siege_battle_standard"] = SPECIALIZED_ITEMTYPE_SIEGE_BATTLE_STANDARD,
 	["siege_catapult"] = SPECIALIZED_ITEMTYPE_SIEGE_CATAPULT,
@@ -214,6 +219,9 @@ local itemTypeMap = {
 	["reagent"] = ITEMTYPE_REAGENT,
 	["recall_stone"] = ITEMTYPE_RECALL_STONE,
 	["recipe"] = ITEMTYPE_RECIPE,
+	["grimoire"] = ITEMTYPE_CRAFTED_ABILITY,
+	["scribing"] = ITEMTYPE_CRAFTED_ABILITY_SCRIPT,
+	["scribing_ink"] = ITEMTYPE_SCRIBING_INK,
 	["siege"] = ITEMTYPE_SIEGE,
 	["soul_gem"] = ITEMTYPE_SOUL_GEM,
 --	["spellcrafting_tablet"] = ITEMTYPE_SPELLCRAFTING_TABLET,  -- removed in 41??
@@ -455,7 +463,7 @@ function AutoCategory.getItemStyles()
 		style = GetItemStyleName(k)
 		if style and style ~= "" and style ~= "use me" and style ~= "witches festival 2019" then
 			style = zo_strlower(style)
-			table.insert(is,style)
+			is[#is+1] = style
 		end
 	end
 	--d(is)
@@ -525,7 +533,7 @@ function AutoCategory.RuleFunc.isItemId(...)
 end
 
 function AutoCategory.RuleFunc.SpecializedItemType( ... )
-	local fn = "type"
+	local fn = "sptype"
 	local ac = select( '#', ... )
 	if ac == 0 then
 		error( string.format("error: %s(): require arguments." , fn))
@@ -1030,6 +1038,30 @@ function AutoCategory.RuleFunc.AutoSetName( ... )
 	return true
 end
 
+-- combine perfected with equiv non-perfected sets
+function AutoCategory.RuleFunc.CombinedAutoSetName( ... )
+	local fn = "combined_autoset"
+
+	local hasSet, setName, _, _, _, setId, _  = GetItemLinkSetInfo(AC.checkingItemLink)
+	if not hasSet then
+		-- item is not part of a set
+		return false
+	end
+	--fix german language issue
+	setName = string.gsub( setName , "%^.*", "")
+	
+	local nonperf = GetItemSetUnperfectedSetId(setId)
+	if nonperf and nonperf>0 and nonperf ~= setId then
+		AutoCategory.AdditionCategoryName = GetItemSetName(nonperf)
+		
+	else
+		-- add in the category (set name) if necessary and assign item to it
+		AutoCategory.AdditionCategoryName = setName
+
+	end
+	return true
+end
+
 function AutoCategory.RuleFunc.IsSet( ... )
 	local fn = "isset"
 	local hasSet, setName = GetItemLinkSetInfo(AC.checkingItemLink)
@@ -1217,9 +1249,6 @@ function AutoCategory.RuleFunc.ItemName( ... )
 	
 	local itemName = string.lower(GetItemLinkName(AC.checkingItemLink))
    
-	--if not hasSet then
-	--	return false
-	--end
 	for ax = 1, ac do
 		
 		local arg = select( ax, ... )
@@ -1259,7 +1288,7 @@ function AutoCategory.RuleFunc.IsTag( ... )
 	local taglist = {}
 	for ax = 1, ac do
 		local arg = select( ax, ... )
-		table.insert(taglist, arg)
+		taglist[#taglist+1] = arg
 	end
 
 	
@@ -1276,7 +1305,6 @@ function AutoCategory.RuleFunc.IsTag( ... )
 		end
 	end
 	for _,idsc in ipairs(itemTagStrings) do
-		--d(idsc)
 		for _,desc in ipairs(taglist) do
 			if string.lower(idsc) == string.lower(desc) then return true end
 		end
@@ -1587,6 +1615,41 @@ function AutoCategory.RuleFunc.CharName(...)
 	return false
 end
 
+-- see if any of the listed character names matches your character name
+-- returns true/false
+function AutoCategory.RuleFunc.AcctName(...)
+    local fn = "acctname" 
+    local pn = string.lower(GetDisplayName())
+    local ac = select( '#', ... )
+	if ac == 0 then
+		error( string.format("error: %s(): require arguments." , fn))
+	end
+	for ax = 1, ac do
+		
+		local arg = select( ax, ... )
+		
+		if not arg then
+			error( string.format("error: %s():  argument is nil." , fn))
+		end
+		
+		local findString
+		if type( arg ) == "number" then
+			findString = tostring(arg)
+			
+		elseif type( arg ) == "string" then
+			findString = arg
+			
+		else
+			error( string.format("error: %s(): argument is error." , fn ) )
+		end
+		if string.find(pn, findString, 1 ,true) then
+			return true
+		end
+	end
+	
+	return false
+end
+
 function AutoCategory.AddRuleFunc(name, func)
     AutoCategory.Environment[name] = func
 end
@@ -1664,6 +1727,7 @@ AutoCategory.Environment = {
 	charlevel    = AutoCategory.RuleFunc.CharLevel,
 	charcp       = AutoCategory.RuleFunc.CharCP,
     charname     = AutoCategory.RuleFunc.CharName,
+    acctname     = AutoCategory.RuleFunc.AcctName,
 
 	sellprice    = AutoCategory.RuleFunc.SellPrice,
 	stacksize    = AutoCategory.RuleFunc.StackSize,
@@ -1675,7 +1739,8 @@ AutoCategory.Environment = {
 
 	-- -------------------------------------------
 	-- special sort gear into sets functionality
-	autoset      = AutoCategory.RuleFunc.AutoSetName,	
+	autoset      = AutoCategory.RuleFunc.AutoSetName,
+	combined_autoset = AutoCategory.RuleFunc.CombinedAutoSetName,
     
 	--[[
 	-- see new implementatons in AutoCategory/Misc_Plugins.lua
