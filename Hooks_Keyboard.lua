@@ -707,10 +707,19 @@ function AutoCategory.HookKeyboardMode()
 
 	-- AlphaGear change detection hook
 	if AG then
-		ZO_PostHook(AG, "handlePostChangeGearSetItems", function() refresh(true) end)
-		ZO_PostHook(AG, "LoadProfile", function() refresh(true) end) -- can be called twice in a row...
+		ZO_PostHook(AG, "handlePostChangeGearSetItems", function() AutoCategory.RefreshCurrentList() end)
+
+		ZO_PostHook(AG, "LoadProfile", function()
+			if AutoCategory.agInitSkipped then
+				bulkReloadTweak = true
+				AutoCategory.RefreshCurrentList()
+			else
+				AutoCategory.agInitSkipped = true
+			end
+		end) -- can be called twice in a row...
 	end
 end
+AutoCategory.agInitSkipped = false
 
 function AutoCategory.UnHookKeyboardMode()
  	-- Other events that cause a full refresh
