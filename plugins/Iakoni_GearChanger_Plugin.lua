@@ -233,15 +233,15 @@ function AutoCategory_Iakoni.Initialize(loadpred)
         return
     end
     
-	AutoCategory.logger:Warn("Initializing Iakoni Gear Changer plugin integration")
+	--AutoCategory.logger:Warn("Initializing Iakoni Gear Changer plugin integration")
     -- reinitialize strings
     AutoCategory.LoadLanguage(localization_strings,"en")
     
     -- load predefinedRules
 	--if loadpred then
-		AutoCategory.logger:Info("Loading pre-defines for Iakoni Gear Changer - "..#AutoCategory_Iakoni.predefinedRules.." into predefinedRules "..#AutoCategory.predefinedRules)
+		--AutoCategory.logger:Info("Loading pre-defines for Iakoni Gear Changer - "..#AutoCategory_Iakoni.predefinedRules.." into predefinedRules "..#AutoCategory.predefinedRules)
 		AutoCategory.AddPredefinedRules(AutoCategory_Iakoni.predefinedRules)
-		AutoCategory.logger:Info("Finsihed loading pre-defines for Iakoni Gear Changer - "..#AutoCategory_Iakoni.predefinedRules.." now predefinedRules "..#AutoCategory.predefinedRules)
+		--AutoCategory.logger:Info("Finsihed loading pre-defines for Iakoni Gear Changer - "..#AutoCategory_Iakoni.predefinedRules.." now predefinedRules "..#AutoCategory.predefinedRules)
 	--end
     
     -- load supporting rule functions

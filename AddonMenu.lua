@@ -355,12 +355,12 @@ function AC_UI.BagSet_SelectRule_LAM:refresh(bagId)
 	local currentBag = bagId or getCurrentBagId()
 	local ndx = BagSet_SelectRule_LAM:getValue()
 
-	AC.logger:Debug("SelectRule:refresh: Updating cvt lists for BagSet_SelectRule for bag "..tostring(currentBag))
+	--AC.logger:Debug("SelectRule:refresh: Updating cvt lists for BagSet_SelectRule for bag "..tostring(currentBag))
 	do
 		-- dropdown lists for Edit Bag Rules selection (AC_DROPDOWN_EDITBAG_BAG)
 		local dataCurrentRules_EditBag = CVT:New(self.controlName,nil, CVT.USE_VALUES + CVT.USE_TOOLTIPS)
 		if currentBag and cache.entriesByBag[currentBag] then
-			AC.logger:Debug("SelectRule:refresh: Getting rules for bag "..tostring(currentBag))
+			--AC.logger:Debug("SelectRule:refresh: Getting rules for bag "..tostring(currentBag))
 			dataCurrentRules_EditBag:assign(cache.entriesByBag[currentBag])
 		end
 		self:assign(dataCurrentRules_EditBag)
@@ -371,7 +371,7 @@ function AC_UI.BagSet_SelectRule_LAM:refresh(bagId)
 		self:select(ndx)
 	end
 	self:setValue(self:getValue())
-	AC.logger:Debug("SelectRule:refresh: Done updating cvt lists for BagSet_SelectRule for bag "..tostring(currentBag))
+	--AC.logger:Debug("SelectRule:refresh: Done updating cvt lists for BagSet_SelectRule for bag "..tostring(currentBag))
 end
 
 -- set the selection of the BagSet_SelectRule_LAM field
@@ -890,7 +890,7 @@ end
 -- customization of BaseDD for CatSet_SelectRule_LAM
 -- -------------------------------------------------------
 function AC_UI.CatSet_SelectRule_LAM:getValue()
-	AC.logger:Debug("CatSet_SelectRule_LAM:getValue returns "..tostring(self.cvt.indexValue))
+	--AC.logger:Debug("CatSet_SelectRule_LAM:getValue returns "..tostring(self.cvt.indexValue))
   	return self.cvt.indexValue
 end
 
