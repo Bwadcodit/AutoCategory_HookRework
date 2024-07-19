@@ -25,7 +25,6 @@ AutoCategory_localization_strings["en"] = {
     SI_AC_ALIGNMENT_CENTER = "Center",
     SI_AC_ALIGNMENT_RIGHT = "Right",
 
-    --
     SI_AC_DEFAULT_NAME_EMPTY_TAG = "<Empty>",
     SI_AC_DEFAULT_NAME_CATEGORY_OTHER = "Others",
     SI_AC_DEFAULT_NAME_NEW_CATEGORY = "NewCategory",
@@ -98,6 +97,8 @@ AutoCategory_localization_strings["en"] = {
     SI_AC_MENU_EC_EDITBOX_RULE_TOOLTIP = "Rules will be applied to bags to categorize items",
     SI_AC_MENU_EC_BUTTON_LEARN_RULES = "Learn Rules",
     SI_AC_MENU_EC_BUTTON_LEARN_RULES_TOOLTIP = "Open on-line rule Help URL",
+    SI_AC_MENU_EC_BUTTON_NEW_CATEGORY = "New",
+    SI_AC_MENU_EC_BUTTON_NEW_CATEGORY_TOOLTIP = "Create a new category with selected tag",
     SI_AC_MENU_EC_BUTTON_CHECK_RULE = "Check",
     SI_AC_MENU_EC_BUTTON_CHECK_RESULT_GOOD = "|c2DC50EGood|r",
     SI_AC_MENU_EC_BUTTON_CHECK_RESULT_ERROR = "|cFF0000Error in rule|r",
@@ -107,8 +108,6 @@ AutoCategory_localization_strings["en"] = {
     SI_AC_MENU_EC_BUTTON_COPY_CATEGORY_TOOLTIP = "Make a new copy of selected category. (The copy of a predefined-category is no longer predefined and can be modified.)",
     SI_AC_MENU_EC_BUTTON_DELETE_CATEGORY = "Delete",
     SI_AC_MENU_EC_BUTTON_DELETE_CATEGORY_TOOLTIP = "Delete selected category. Note that a predefined category cannot be deleted.",
-    SI_AC_MENU_EC_BUTTON_NEW_CATEGORY = "New",
-    SI_AC_MENU_EC_BUTTON_NEW_CATEGORY_TOOLTIP = "Create a new category with selected tag",
 
     -- Appearance Settings strings
     SI_AC_MENU_SUBMENU_APPEARANCE_SETTING = "|c0066FF[Appearance Setting]|r |c65000b(Keyboard-only)|r",
@@ -211,11 +210,11 @@ AutoCategory_localization_strings["en"] = {
     SI_AC_DEFAULT_CATEGORY_WOODWORKING= "Woodworking",
     SI_AC_DEFAULT_CATEGORY_WOODWORKING_DESC= "",
 
-    --
+
     SI_BINDING_NAME_TOGGLE_AUTO_CATEGORY= "Toggle Auto Category",
     SI_MESSAGE_TOGGLE_AUTO_CATEGORY_ON="Auto Category: ON",
     SI_MESSAGE_TOGGLE_AUTO_CATEGORY_OFF="Auto Category: OFF",
-    
+
     -- Collapses context menu
     SI_CONTEXT_MENU_EXPAND = "Expand",
     SI_CONTEXT_MENU_COLLAPSE = "Collapse",

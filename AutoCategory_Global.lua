@@ -9,7 +9,7 @@ local SF = LibSFUtils
  
 AutoCategory = {
     name = "AutoCategory",
-    version = "4.1",
+    version = "4.1.1",
     settingName = "AutoCategory",
     settingDisplayName = "AutoCategory - Revised",
     author = "Shadowfen, crafty35, RockingDice, Friday_the13_rus",
@@ -46,13 +46,7 @@ setmetatable(printLibDebug,  { __call = function(self, name)
     })
 
 -- initialize the logger for AutoCategory
-if LibDebugLogger then
-  AutoCategory.logger = LibDebugLogger.Create("AutoCategory")
-  AutoCategory.logger:SetEnabled(true)
-  
-else
-  AutoCategory.logger = printLibDebug
-end
+AutoCategory.logger = printLibDebug
 
 -- checks the versions of libraries (where possible) and warn in
 -- debug logger if we detect out of date libraries.

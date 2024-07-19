@@ -33,8 +33,7 @@ local LMP = LibMediaProvider
 local SF = LibSFUtils
 local AC = AutoCategory
 
-
-local logger = AutoCategory.logger
+local aclogger = AutoCategory.logger
 
 -- uniqueIDs of items that have been updated (need rule re-execution), 
 -- based on PLAYER_INVENTORY:OnInventorySlotUpdated hook
@@ -88,6 +87,8 @@ local sortKeys = {
 local CATEGORY_HEADER = 998
 
 -- convenience function
+-- returns true if value1 is nil or if value1 < value2
+-- returns false otherwise
 local function NilOrLessThan(value1, value2)
     if value1 == nil then
         return true
@@ -106,6 +107,7 @@ local function NilOrLessThan(value1, value2)
     end
 end
 
+-- build a colon delimited string of whatever was passed in
 local function buildHashString(...)
 	return SF.dstr(":",...)
 end
@@ -138,9 +140,9 @@ local function getHeaderFace()
 		return header_face
 	end
 	local appearance = AC.acctSaved.appearance
-	--AC.logger:Debug("Fetching face "..appearance["CATEGORY_FONT_NAME"].." from LMP:Fetch")
+	aclogger:Debug("Fetching face "..appearance["CATEGORY_FONT_NAME"].." from LMP:Fetch")
 	header_face = LMP:Fetch('font',  appearance["CATEGORY_FONT_NAME"] ) 
-	--AC.logger:Debug("Retrieved face "..SF.str(header_face).." from LMP:Fetch")
+	aclogger:Debug("Retrieved face "..SF.str(header_face).." from LMP:Fetch")
 	return header_face
 end
 
@@ -159,7 +161,7 @@ local function setup_InventoryItemRowHeader(rowControl, slot, overrideOptions)
 	local data = slot.dataEntry.data
 	data.AC_categoryName = SF.nilDefault(data.AC_categoryName, AutoCategory.saved.appearance["CATEGORY_OTHER_TEXT"])
 	local cateName = data.AC_categoryName
-	data.AC_bagTypeId = SF.nilDefault(data.AC_bagTypeId, 0)
+	data.AC_bagTypeId = SF.nilDefault(data.AC_bagTypeId, 1)
 	local bagTypeId = data.AC_bagTypeId
 	data.AC_catCount = SF.nilDefault(data.AC_catCount, 0)
 	local num = data.AC_catCount
@@ -235,9 +237,8 @@ end
 
 -- create a list entry for a category header.
 -- will return nil, if catInfo is nil
-local function createHeaderEntry(catInfo) --, headerType)
+local function createHeaderEntry(catInfo)
 	if not catInfo then return {} end
-	--if headerType == nil then headerType = CATEGORY_HEADER end
 
 	local headerEntry = ZO_ScrollList_CreateDataEntry(CATEGORY_HEADER, { 
 			AC_categoryName = catInfo.AC_categoryName,
@@ -262,10 +263,9 @@ local function isHiddenEntry(itemEntry)
 	local data = itemEntry.data
 	if data.AC_isHidden or data.AC_bagTypeId == nil then return true end
 	if not data.AC_matched and isUngroupedHidden(data.AC_bagTypeId) then 
-		return true 
+		return true
 	end
-
-	return AutoCategory.IsCategoryCollapsed(data.AC_bagTypeId, data.AC_categoryName)
+	return false
 end
 
 local function isCollapsed(itemEntry)
@@ -497,7 +497,6 @@ local function createNewScrollData(scrollData) --, sortfn)
 		-- or else create an entry with count = 1
 		local data = itemEntry.data
 		local AC_categoryName = data.AC_categoryName
-		--AC.logger:Debug("inven: "..k..". "..AC_categoryName)
 		if not categoryList[AC_categoryName] then
 			-- keep track of categories and required data
 			categoryList[AC_categoryName] =  {
@@ -523,17 +522,14 @@ local function createNewScrollData(scrollData) --, sortfn)
 	-- Create headers and append to newScrollData
 		for _, catInfo in pairs(categoryList) do ---> add tracked categories
 		if catInfo.AC_catCount ~= nil then
-			--AC.logger:Debug("catinfo: "..". "..tostring(catInfo.AC_sortPriorityName))
+			--aclogger:Debug("catinfo: "..". "..tostring(catInfo.AC_sortPriorityName))
 			local headerEntry = createHeaderEntry(catInfo)
-			--AC.logger:Debug("hdr: "..". "..tostring(headerEntry.data.AC_sortPriorityName))
+			--aclogger:Debug("hdr: "..". "..tostring(headerEntry.data.AC_sortPriorityName))
 			if headerEntry then
 				table.insert(newScrollData, headerEntry)
 			end
 		end
 	end
-	--if sortfn then
-	--	table.sort(newScrollData, sortfn)
-	--end
 	return newScrollData
 end
 
@@ -559,7 +555,7 @@ local function prehookSort(self, inventoryType)
 		scene = SCENE_MANAGER:GetCurrentScene():GetName()
 	end
 	if scene then
-		if AutoCategory.BulkMode and AutoCategory.BulkMode == true then
+		if AutoCategory.BulkMode then
 			if scene == "guildBank" or (XLGearBanker and scene == "bank") then
 				return false	-- skip out early
 			end
@@ -581,12 +577,8 @@ local function prehookSort(self, inventoryType)
 	local scrollData = ZO_ScrollList_GetDataList(list)
 
 	if scrollData then
-		--ZO_ScrollList_Clear(list)
-		--ZO_ScrollList_ResetToTop(list)
 		handleRules(scrollData, needsReload) --> update rules' results if necessary
-		local newdata = createNewScrollData(scrollData) --, zo_inventory.sortFn) 
-		list.data = newdata
-		--table.sort(list.data, zo_inventory.sortFn)
+		list.data = createNewScrollData(scrollData) --, zo_inventory.sortFn) 
 		ZO_ScrollList_Commit(list)
 	end
 	return false
@@ -608,7 +600,7 @@ local function prehookCraftSort(self)
 
 		-- add header rows
 		self.list.data = createNewScrollData(scrollData) --, self.sortFunction)
-		--table.sort(self.list.data, self.sortFunction)
+		table.sort(self.list.data, self.sortFunction)
 		ZO_ScrollList_Commit(self.list)
 	end
 	-- continue on to run follow-on hooks

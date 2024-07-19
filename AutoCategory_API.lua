@@ -1,6 +1,11 @@
 --====API====--
 local SF = LibSFUtils
 local AC = AutoCategory
+local RuleApi = AC.RuleApi
+
+-- aliases
+local saved = AutoCategory.saved
+local aclogger = AutoCategory.logger
 
 -- For use by bulk updaters of inventory (ESPECIALLY the Guild Bank)
 -- to not perform sorting for a specific period of time (until the
@@ -10,11 +15,12 @@ local AC = AutoCategory
 -- It is hoped that by entering into bulk mode that we do not perform
 -- server requests for the guild bank 
 function AutoCategory.EnterBulkMode()
-	AutoCategory.BulkMode(true)
+	AutoCategory.BulkMode = true
 end
 function AutoCategory.ExitBulkMode()
-	AutoCategory.BulkMode(false)
+	AutoCategory.BulkMode = false
 end
+
 
 
 -- Convert a ZOS bagId into AutoCategory bag_type_id
@@ -46,7 +52,7 @@ end
 function AutoCategory.validateBagRules(bagId, acprimary)
 	return AutoCategory.validateACBagRules(convert2BagTypeId(bagId, acprimary))
 end
-	
+
 -- Make sure that all of the rules for this bag are valid/undamaged
 -- Do this by bag rather than by rule to avoid repeating this unnecessarily
 -- as the bag of rules is evaluated per each item in the bag.
@@ -56,31 +62,34 @@ function AutoCategory.validateACBagRules(acBagType)
 	if acBagType == nil then return false end
 
 	-- Mark rules as damaged when we find something wrong with them
+	-- returns nothing
 	local function checkValidRule(name, rule)
 		if rule == nil or name == nil then return end
-		
-		local isValid = true
-		if rule.rule == nil then
-			rule:setError(true,"missing rule definition")
-			--rule.damaged = true 
+		if rule.name ~= name then 
+			RuleApi.setError(rule, true,"name mismatch between bagrule and backing rule")
 			return
 		end
-		local ruleCode = AutoCategory.compiledRules[name]
+
+		local isValid = true
+		if rule.rule == nil then
+			RuleApi.setError(rule,true,"missing rule definition")
+			return
+		end
+		local ruleCode = AutoCategory.compiledRules[rule.name]
 		if not ruleCode or type(ruleCode) ~= "function" then
-			rule:setError(true,"invalid compiled rule function")
-			--rule.damaged = true 
-			AutoCategory.compiledRules[name] = nil
+			RuleApi.setError(rule, true,"invalid compiled rule function")
+			AutoCategory.compiledRules[rule.name] = nil
 			return
 		end
 		rule.damaged = nil
 		return
 	end
-	
+
 	-- Make sure all of the rules in the bag are evaluated if damaged and marked appropriately
-	local bag = AutoCategory.saved.bags[acBagType]
+	local bag = saved.bags[acBagType]
 	for i = 1, #bag.rules do
 		local entry = bag.rules[i] 
-		local rule = AutoCategory.GetRuleByName(entry.name)
+		local rule = AC.BagRuleApi.getBackingRule(entry)
 		checkValidRule(entry.name, rule)
 	end
 end
@@ -92,49 +101,43 @@ end
 --
 -- returns
 --   boolean - was a match found?
---   string  - name of rule matched combined with additionCategoryName
+--   string  - name of rule matched combined with additionCategoryName, ex. "Set(godly set)"
 --   number  - priority of rule
 --   enum    - bag type id
 --   boolean - is entry hidden?
 function AutoCategory:MatchCategoryRules( bagId, slotIndex, specialType )
-	local logger = AutoCategory.logger
-	
-	AutoCategory.LazyInit()
-
 	-- set up bagId and slotIndex to "pass in" to the rule functions
 	self.checkingItemBagId = bagId
 	self.checkingItemSlotIndex = slotIndex
 	self.checkingItemLink = GetItemLink(bagId, slotIndex)
 
-	
 	local bag_type_id = convert2BagTypeId(bagId, specialType)
 	if not bag_type_id then
 		-- invalid bag
-		--logger:Error("[MatchCategoryRules] invalid bag_type_id for bagId "..bagId.." special type "..(specialType or "nil"))
+		--aclogger:Error("[MatchCategoryRules] invalid bag_type_id for bagId "..bagId.." special type "..(specialType or "nil"))
 		return false, "", 0, nil, nil
 	end
-	
+
 	-- Adjust the name of the category based on the presence of 
 	-- an enhancement (set name) and if SHOW_CATEGORY_SET_TITLE is enabled
 	local function adjustName(name, enhancement)
 		if name == nil or name == "" then 
-			name  = AutoCategory.acctSaved.appearance["CATEGORY_OTHER_TEXT"]
-			enhancement = ""
+			name  = AC.acctSaved.appearance["CATEGORY_OTHER_TEXT"]
+			return name
 		end
 		if enhancement == "" then
 			-- just use declared category name
 			return name
-			
-		elseif AutoCategory.saved.general["SHOW_CATEGORY_SET_TITLE"] == false then
+
+		elseif saved.general["SHOW_CATEGORY_SET_TITLE"] == false then
 			-- just use the set name without the category name
 			return enhancement
-			
+
 		end
 		-- combine the category and set names
 		return name .. string.format(" (%s)", enhancement)
 	end
-	
-	
+
 	-- Make sure that we have a valid (and undamaged) rule to run on the item
 	local function checkValidRule(name, rule)
 		if rule == nil or name == nil then return false end
@@ -142,15 +145,14 @@ function AutoCategory:MatchCategoryRules( bagId, slotIndex, specialType )
 		-- damage check/rule validation really occurs before the MatchCategoryRules call 
 		return true
 	end
-	
-	
-	local bag = AutoCategory.saved.bags[bag_type_id]
+
+	local bag = saved.bags[bag_type_id]
 	if not bag then
-		--AutoCategory.logger:Warning("[MatchCategoryRules] bag for bag_type_id ("..bag_type_id..") was nil")
+		--aclogger:Warning("[MatchCategoryRules] bag for bag_type_id ("..bag_type_id..") was nil")
 		return  false, "", 0, nil, nil
 	end
 	if not bag.rules then
-		--AutoCategory.logger:Warning("[MatchCategoryRules] bag.rules was nil")
+		--aclogger:Warning("[MatchCategoryRules] bag.rules was nil")
 		return  false, "", 0, nil, nil
 	end
 	for i = 1, #bag.rules do
@@ -175,16 +177,16 @@ function AutoCategory:MatchCategoryRules( bagId, slotIndex, specialType )
 								bag_type_id, 
 								entry.isHidden
 						end
-						
+
 					else
-						AutoCategory.logger:Error("Error2: " .. tostring(entry.name).. " - ".. tostring(res))
-						rule:setError(true, res)
+						aclogger:Error("Error2: " .. tostring(entry.name).. " - ".. tostring(res))
+						RuleApi.setError(rule, true, res)
 						AutoCategory.compiledRules[entry.name] = nil
 					end
 				end
 			end
 		end
 	end
-	
+
 	return false, "", 0, bag_type_id, false
 end 
