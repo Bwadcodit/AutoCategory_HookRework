@@ -1,4 +1,20 @@
 
+[COLOR="DeepSkyBlue"]4.1.7 (104)[/COLOR]:
+[LIST]
+[*] Added back in the HooksGamepad.lua file that somehow disappeared from the last (broken) release package.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]4.1.6 (103)[/COLOR]:
+[LIST]
+[*] Default bag settings will not be loaded in as long as you already have bag settings in your saved variables.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]4.1.5 (102)[/COLOR]:
+[LIST]
+[*] Update version number displayed on addon Settings page.
+[*] Releasing this version because in testing, categories remain "removed" from bag settings after logout or reloadui. (I think that the problem was fixed in v4.1.4, but I know it's not in this version.)
+[/LIST]
+
 [COLOR="DeepSkyBlue"]4.1.4 (101)[/COLOR]:
 [LIST]
 [*] After consideration, I've added the variable AutoCategory.Inited to the AutoCategory_API.lua to signify that it is protected from deletion the next time that I'm cleaning out unused code. Addon developers can now rely on it continuing to exist.

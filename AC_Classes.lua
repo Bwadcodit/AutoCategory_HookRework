@@ -4,9 +4,9 @@ local L = GetString
 local SF = LibSFUtils
 local AC = AutoCategory
 
-local aclogger = AutoCategory.logger
-local RuleApi = AutoCategory.RuleApi
-local BagRuleApi = AutoCategory.BagRuleApi
+--local aclogger = AutoCategory.logger
+--local RuleApi = AutoCategory.RuleApi
+--local BagRuleApi = AutoCategory.BagRuleApi
 
 -- -------------------------------------------------------
 -- The CVT class manages the choices, choicesValues, and
@@ -89,11 +89,11 @@ function AutoCategory.CVT:assign(tblB)
 	if not tblB then return end
 
 	if self.choicesValues and not tblB.choicesValues then
-		--aclogger:Debug("don't have choicesValues for src tables in assign "..tostring(self.controlName))
+		--AutoCategory.logger:Debug("don't have choicesValues for src tables in assign "..tostring(self.controlName))
 		return
 	end
 	if self.choicesTooltips and not tblB.choicesTooltips then
-		--aclogger:Debug("don't have choicesTooltips for dest tables in assign "..tostring(self.controlName))
+		--AutoCategory.logger:Debug("don't have choicesTooltips for dest tables in assign "..tostring(self.controlName))
 		return
 	end
 
@@ -219,13 +219,13 @@ function AutoCategory.CVT:updateControl()
 		return
 	end
 
-	--aclogger:Debug("CVT:updateControl: getting control for "..tostring(self.controlName))
+	--AutoCategory.logger:Debug("CVT:updateControl: getting control for "..tostring(self.controlName))
 	local dropdownCtrl = WINDOW_MANAGER:GetControlByName(self.controlName)
     if dropdownCtrl == nil then
         return
     end
 
-	--aclogger:Debug("CVT:updateControl: lists changed - need to update "..tostring(self.controlName))
+	--AutoCategory.logger:Debug("CVT:updateControl: lists changed - need to update "..tostring(self.controlName))
 	dropdownCtrl:UpdateChoices(self.choices, self.choicesValues,
 		self.choicesTooltips)
 end
@@ -332,13 +332,13 @@ function AutoCategory.BaseUI:updateValue()
 	local val = self:getValue()
 	if not val then return end
 
-	--aclogger:Debug("updateControl: getting control for "..tostring(self.cvt.controlName))
+	--AutoCategory.logger:Debug("updateControl: getting control for "..tostring(self.cvt.controlName))
 	local uiCtrl = WINDOW_MANAGER:GetControlByName(self.controlName)
     if uiCtrl == nil then
         return
     end
 
-	--aclogger:Debug("updateValue: value changed - need to update "..tostring(self.controlName))
+	--AutoCategory.logger:Debug("updateValue: value changed - need to update "..tostring(self.controlName))
 	uiCtrl:UpdateValue(false, val)
 end
 
@@ -378,14 +378,14 @@ end
 function AutoCategory.BaseDD:updateControl()
 	if not self.cvt.controlName then return end
 
-	--aclogger:Debug("updateControl: getting control for "..tostring(self.cvt.controlName))
+	--AutoCategory.logger:Debug("updateControl: getting control for "..tostring(self.cvt.controlName))
 	local dropdownCtrl = WINDOW_MANAGER:GetControlByName(self.cvt.controlName)
     if dropdownCtrl == nil then
         return
     end
 
 	if self.cvt.dirty == 1 then		-- only do this if cvt lists have been modified
-		--aclogger:Debug("updateControl: dropdown lists changed - updating "..tostring(self.cvt.controlName))
+		--AutoCategory.logger:Debug("updateControl: dropdown lists changed - updating "..tostring(self.cvt.controlName))
 		-- only update the choices if we know that the lists contents changed
 		self.cvt.dirty = nil
 		dropdownCtrl:UpdateChoices(self.cvt.choices, self.cvt.choicesValues,
@@ -393,7 +393,7 @@ function AutoCategory.BaseDD:updateControl()
 	end
 
 	if self.cvt.indexValue then
-		--aclogger:Debug("updateControl: value changed - need to update "..tostring(self.cvt.controlName))
+		--AutoCategory.logger:Debug("updateControl: value changed - need to update "..tostring(self.cvt.controlName))
 		dropdownCtrl:UpdateValue(false, self.cvt.indexValue)
 	end
 
@@ -416,7 +416,7 @@ end
 function AutoCategory.GetUsableRuleName(name)
 	local testName = name
 	local index = 1
-	while AutoCategory.cache.rulesByName[testName] ~= nil do
+	while AutoCategory.RulesW.ruleNames[testName] ~= nil do
 		testName = name .. index
 		index = index + 1
 	end
@@ -546,11 +546,11 @@ end
 -- rule list wrapper adds a name lookup to accompany the base list of rules
 function AutoCategory.RuleList:initialize(rules)
 	self.ruleList = rules
-	self.lkRules = {}
+	self.ruleNames = {}		-- lookup by name for ruleList   [name] ruleListIndex
 	local arrules = self.ruleList
 	for k = #arrules,1,-1 do
-		if not self.lkRules[arrules[k].name ] then
-			self.lkRules[arrules[k].name] = k
+		if not self.ruleNames[arrules[k].name ] then
+			self.ruleNames[arrules[k].name] = k
 		end
 	end
 end
@@ -561,10 +561,11 @@ function AutoCategory.RuleList.size(self)
 end
 
 function AutoCategory.RuleList.addRule(self, newRule, overwriteFlag)
-	if not newRule or not newRule.name then return end
+	if not newRule or not newRule.name then return end	-- bad rule
 
-	local ndx = self.lkRules[newRule.name]
+	local ndx = self.ruleNames[newRule.name]
 	if ndx then
+		-- rule by name already in list
 		if overwriteFlag then
 			self.ruleList[ndx] = newRule
 		end
@@ -572,42 +573,64 @@ function AutoCategory.RuleList.addRule(self, newRule, overwriteFlag)
 	end
 
 	self.ruleList[#self.ruleList+1] = newRule
-	self.lkRules[newRule.name] = #self.ruleList
+	self.ruleNames[newRule.name] = #self.ruleList
 end
 
+-- remove a rule from the ruleList
 function AutoCategory.RuleList.removeRuleByName(self, ruleName)
-	local ndx = self.lkRules[ruleName]
+	if not ruleName then return end
+
+	local ndx = self.ruleNames[ruleName]
 	if ndx then
-		self.lkRules[ruleName] = nil
+		self.ruleNames[ruleName] = nil
 		table.remove(self.ruleList, ndx)
 	end
 end
 
+-- remove a rule from the ruleList by position (index) in the ruleList
 function AutoCategory.RuleList.removeRule(self, ndx)
 	if not ndx then return end
 	local rl = self.ruleList[ndx]
 	if not rl then return end
 	local name = rl.name
 	if name then
-		self.lkRules[name] = nil
+		self.ruleNames[name] = nil
 	end
 	table.remove(self.ruleList, ndx)
 end
 
+-- returns a rule from the ruleList as specified by name
 function AutoCategory.RuleList.getRuleByName(self, ruleName)
 	if not ruleName then return nil end
-	local ndx = self.lkRules[ruleName]
+	local ndx = self.ruleNames[ruleName]
 	if not ndx then return nil end
 	return self.ruleList[ndx]
 end
 
+-- clear the contents of the ruleList
 function AutoCategory.RuleList.clear(self)
 	SF.safeClearTable(self.ruleList)
 end
 
 -- returns the name lookup table used by the wrapper (temporary measure)
 function AutoCategory.RuleList.getLookup(self)
-	return self.lkRules
+	return self.ruleNames
+end
+
+-- sort the contents of the ruleList using sortfn
+function AutoCategory.RuleList.sort(self, sortfn)
+	if type(sortfn ~= "function") then return end
+
+	SF.safeClearTable(ruleNames)
+	table.sort(self.ruleList, sortfn)
+
+	-- rebuild name lookup
+	local arrules = self.ruleList
+	for k = #arrules,1,-1 do
+		if not self.lkRruleNamesules[arrules[k].name ] then
+			self.ruleNames[arrules[k].name] = k
+		end
+	end
 end
 --[[
 -- not currently used (and not complete)
