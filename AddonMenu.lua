@@ -1214,7 +1214,7 @@ function AC_UI.CatSet_DeleteCat_LAM:execute()
 	-- removing the rule from any bags
 	local bagId
 	for bagId = 1,6 do
-		local savedbag = saved.bags[bagId]
+		local savedbag = AutoCategory.saved.bags[bagId]
 		for i = 1, #savedbag.rules do
 			local bagEntry = savedbag.rules[i]
 			if bagEntry.name == oldRuleName then

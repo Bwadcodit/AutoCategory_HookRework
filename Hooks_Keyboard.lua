@@ -507,9 +507,10 @@ local function createNewScrollData(scrollData) --, sortfn)
 	return newScrollData
 end
 
+-- prehook
 local function prehookSort(self, inventoryType) 
-	-- revert to default behaviour if safety conditions not met
 	if not AutoCategory.Enabled then return false end
+	-- revert to default behaviour if safety conditions not met
 	if inventoryType == INVENTORY_QUEST_ITEM then return false end
 
 	-- inventory info from esoui/ingame/inventory/inventory.lua
@@ -556,6 +557,7 @@ local function prehookSort(self, inventoryType)
 	return false
 end
 
+-- prehook
 local function prehookCraftSort(self)
 	-- revert to default behaviour if safety conditions not met
 	if not AutoCategory.Enabled then return false end
@@ -579,17 +581,20 @@ local function prehookCraftSort(self)
 	return false
 end
 
--- perform refresh of list
+-- perform refresh of list - callback
 local function refresh(forceRuleReload)
 	AutoCategory.RefreshCurrentList(forceRuleReload)
 end
 
--- event handlers
+--prehook 
 local function onInventorySlotUpdated(self, bagId, slotIndex)
+	if not AutoCategory.Enabled then return false end
+
 	-- mark the slot as needing rule re-evaluation
 	table.insert(forceRuleReloadByUniqueIDs, GetItemUniqueId(bagId, slotIndex))
 end
 
+-- event handler
 local function onStackItems(evtid, bagId)
 	local invType = PLAYER_INVENTORY.bagToInventoryType[bagId]
 	AutoCategory.RefreshList(invType)
