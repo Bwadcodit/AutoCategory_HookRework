@@ -1,4 +1,9 @@
 
+[COLOR="DeepSkyBlue"]4.2 (107)[/COLOR]:
+[LIST]
+[*] Fix error being thrown by the fence launder window. The latest version of ZOS code needed to be replicated and modified to allow the Launder window to work with category headers without erroring out.
+[/LIST]
+
 [COLOR="DeepSkyBlue"]4.1.9 (106)[/COLOR]:
 [LIST]
 [*] Fix error being thrown by delete category. Reported by Teroh.

@@ -163,6 +163,8 @@ local function setup_InventoryItemRowHeader(rowControl, slot, overrideOptions)
 	local bagTypeId = data.AC_bagTypeId
 	data.AC_catCount = SF.nilDefault(data.AC_catCount, 0)
 	local num = data.AC_catCount
+	--if not data.stackLaunderPrice then data.stackLaunderPrice = 0 end
+	--if not slot.dataEntry.data.stackLaunderPrice then slot.dataEntry.data.stackLaunderPrice = 0 end
 
 	local cache = AutoCategory.cache
 	local headerColor = "CATEGORY_FONT_COLOR"
