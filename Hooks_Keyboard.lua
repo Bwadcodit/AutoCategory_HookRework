@@ -168,7 +168,7 @@ local function setup_InventoryItemRowHeader(rowControl, slot, overrideOptions)
 
 	local cache = AutoCategory.cache
 	local headerColor = "CATEGORY_FONT_COLOR"
-	if cache.entriesByName[bagTypeId][cateName] then
+	if cateName and cache.entriesByName[bagTypeId][cateName] then
 		if cache.entriesByName[bagTypeId][cateName].isHidden then
 			headerColor = "HIDDEN_CATEGORY_FONT_COLOR"
 		end

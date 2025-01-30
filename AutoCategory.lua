@@ -5,7 +5,7 @@ local SF = LibSFUtils
 local AC = AutoCategory
 
 local CVT = AutoCategory.CVT
---local aclogger = AutoCategory.logger
+local aclogger = AutoCategory.logger
 local RuleApi = AutoCategory.RuleApi
 --local BagRuleApi = AutoCategory.BagRuleApi
 --local ARW = AutoCategory.ARW
@@ -178,6 +178,7 @@ end
 
 -- for sorting rules by tag and name
 -- returns true if the a should come before b
+-- unused
 local function RuleDataSortingFunction(a, b)
     local result = false
     if a.tag ~= b.tag then
@@ -384,7 +385,6 @@ function AutoCategory.cacheInitBag(bagId)
 	cache.entriesByName[bagId] = SF.safeTable(cache.entriesByName[bagId])
     ZO_ClearTable(cache.entriesByName[bagId])
 
-	--local CVT = AutoCategory.CVT
 	cache.entriesByBag[bagId] = CVT:New(nil, nil, CVT.USE_VALUES + CVT.USE_TOOLTIPS)
 
 	local ename = cache.entriesByName[bagId]	-- { [name] BagRule{ name, priority, isHidden } }
@@ -400,13 +400,13 @@ function AutoCategory.cacheInitBag(bagId)
 	local svdbag = AutoCategory.saved.bags[bagId]
 	table.sort(svdbag.rules, BagRuleSortingFunction)
 
-	AutoCategory.logger:Debug("Initializing bag "..bagId.." with bagrules")
+	aclogger:Debug("Initializing bag "..bagId.." with bagrules")
 	for entry = 1, #svdbag.rules do
 		local bagrule = svdbag.rules[entry] -- BagRule {name, priority, isHidden}
 		if not bagrule then break end
 
 		local ruleName = bagrule.name
-		--AutoCategory.logger:Debug("bag "..entry.." bagrule.name "..tostring(bagrule.name))
+		--aclogger:Debug("bag "..entry.." bagrule.name "..tostring(bagrule.name))
 		if not ename[ruleName] then
 			ename[ruleName] = bagrule
 			ebag.choicesValues[#ebag.choicesValues+1] = AutoCategory.BagRuleApi.formatValue(bagrule)
@@ -534,7 +534,7 @@ local function addTableRules(tbl, tblname, ispredef)
 	--local RulesW = AutoCategory.RulesW
 	if not tbl.rules or tbl.rules == ac_rules.ruleList then return end
 
-	AutoCategory.logger:Info("Adding rules from table "..(tblname or "unknown").."  count = "..#tbl.rules)
+	aclogger:Info("Adding rules from table "..(tblname or "unknown").."  count = "..#tbl.rules)
 
 	-- create name lookup for acctRules
 	--local lkacctRules = AutoCategory.ARW:getLookup()
@@ -546,12 +546,12 @@ local function addTableRules(tbl, tblname, ispredef)
 		local n = ac_rules.ruleNames[rl.name]
 		if not n then
 			ac_rules.ruleList[#ac_rules.ruleList+1] = rl
-			--AutoCategory.logger:Info("Adding rule "..rl.name.." to ac_rules.ruleList ndx="..#ac_rules.ruleList)
+			--aclogger:Info("Adding rule "..rl.name.." to ac_rules.ruleList ndx="..#ac_rules.ruleList)
 			ac_rules.ruleNames[rl.name] = #ac_rules.ruleList
 			return true
 		else
 			ac_rules.ruleList[n] = rl
-			--AutoCategory.logger:Info("Overwriting rule "..rl.name.." to Rulac_rulesesW.ruleList ndx="..n)
+			--aclogger:Info("Overwriting rule "..rl.name.." to Rulac_rulesesW.ruleList ndx="..n)
 			ac_rules.ruleNames[rl.name] = n
 		end
 		return false
@@ -581,18 +581,18 @@ local function addTableRules(tbl, tblname, ispredef)
 
 		r = AutoCategory.GetRuleByName(v.name)
 		if r then
-			AutoCategory.logger:Warn("Found duplicate rule name - "..v.name)
+			aclogger:Warn("Found duplicate rule name - "..v.name)
 			-- already have one
 			if v.rule == r.rule then
 				-- same rule def, so don't add it again
-				AutoCategory.logger:Warn("1 Dropped duplicate rule - "..v.name.."  from AC.rules sourced "..(tblname or "unknown"))
+				aclogger:Warn("1 Dropped duplicate rule - "..v.name.."  from AC.rules sourced "..(tblname or "unknown"))
 
 			else
 				local oldname = v.name
 				-- rename different rule
 				newName = AutoCategory.GetUsableRuleName(v.name)
 				v.name = newName
-				AutoCategory.logger:Warn("Renaming duplicate rule name - "..oldname.." to "..v.name)
+				aclogger:Warn("Renaming duplicate rule name - "..oldname.." to "..v.name)
 
 				addCombinedRule(v)
 				AutoCategory.renameBagRule(oldname, newName)
@@ -602,7 +602,7 @@ local function addTableRules(tbl, tblname, ispredef)
 				else
 					-- add to acctRules
 					addUserRule(tbl, v)
-					AutoCategory.logger:Warn("adding to user rules - "..v.name.."  from sourced "..(tblname or "unknown"))
+					aclogger:Warn("adding to user rules - "..v.name.."  from sourced "..(tblname or "unknown"))
 				end
 			end
 
@@ -614,25 +614,25 @@ local function addTableRules(tbl, tblname, ispredef)
 			if RuleApi.isPredefined(v) then 
 				-- it's a predefined rule
 				addPredef(tbl, v)
-				AutoCategory.logger:Warn("adding to predefined rules - "..v.name.."  from sourced "..(tblname or "unknown"))
+				aclogger:Warn("adding to predefined rules - "..v.name.."  from sourced "..(tblname or "unknown"))
 
 		    else
 				-- it's a user rule
 				addUserRule(tbl, v)
-				AutoCategory.logger:Warn("adding to user rules - "..v.name.."  from sourced "..(tblname or "unknown"))
+				aclogger:Warn("adding to user rules - "..v.name.."  from sourced "..(tblname or "unknown"))
 			end
         end
     end
 end
 
 local function pruneUserRules()
-	AutoCategory.logger:Debug ("Executing pruneUserRules ")
+	aclogger:Debug ("Executing pruneUserRules ")
 	local arrules = AutoCategory.ARW.ruleList --AutoCategory.acctRules.rules
 	local lkacctRules = AutoCategory.ARW:getLookup()
 	for k = #arrules,1,-1 do
 		local ndx = lkacctRules[arrules[k].name]
 		if  ndx and k ~= ndx then
-			AutoCategory.logger:Debug ("Removing duplicate rule ".. arrules[k].name.." from acctRules")
+			aclogger:Debug ("Removing duplicate rule ".. arrules[k].name.." from acctRules")
 			AutoCategory.ARW.removeRule(ndx)
 			--table.remove(arrules, k)
 		end
@@ -641,7 +641,7 @@ local function pruneUserRules()
 	-- remove predefined rules from acctRules
 	for k = #AutoCategory.predefinedRules,1,-1 do
 		local ndx = lkacctRules[AutoCategory.predefinedRules[k].name]
-		AutoCategory.logger:Debug ("Removing predefined rule ".. AutoCategory.predefinedRules[k].name.." from acctRules")
+		aclogger:Debug ("Removing predefined rule ".. AutoCategory.predefinedRules[k].name.." from acctRules")
 		AutoCategory.ARW:removeRule(ndx)
 		--table.remove(arrules, k)
 	end
@@ -649,18 +649,18 @@ end
 
 -- cannot use this until after addons are finally loaded!!
 local function loadPluginPredefines()
-	AutoCategory.logger:Debug ("Executing loadPluginPredefines ")
+	aclogger:Debug ("Executing loadPluginPredefines ")
 	-- add plugin predefined rules to the base predefined rules
 	for name, plugin in pairs(AutoCategory.Plugins) do
 		if plugin.predef then
-			AutoCategory.logger:Debug ("Processing predefs from plugin ".. name.." "..SF.GetSize(plugin.predef))
+			aclogger:Debug ("Processing predefs from plugin ".. name.." "..SF.GetSize(plugin.predef))
 
 			-- process all of the rules in the table
 			addTableRules( { rules=plugin.predef}, name..".predefinedRules", true)
 		end
 	end
-	AutoCategory.logger:Debug ("Done executing loadPluginPredefines ")
-	AutoCategory.logger:Debug("2.5 predefined "..SF.GetSize(AutoCategory.predefinedRules))
+	aclogger:Debug ("Done executing loadPluginPredefines ")
+	aclogger:Debug("2.5 predefined "..SF.GetSize(AutoCategory.predefinedRules))
  end
 
 
@@ -672,6 +672,10 @@ function AutoCategory.onLoad(event, addon)
 
 	-- make sure we are not called again
 	AutoCategory.evtmgr:unregEvt(EVENT_ADD_ON_LOADED)
+
+	AutoCategory.logger = SF.Createlogger("AutoCategory")
+	aclogger = AutoCategory.logger
+	AutoCategory.logger:SetEnabled(true)
 
     AutoCategory.checkLibraryVersions()
 
@@ -721,10 +725,10 @@ function AutoCategory.onPlayerActivated()
 	--capabilities with other (older) add-ons
 	IntegrateQuickMenu()
 
-	if LibDebugLogger then
-		AutoCategory.logger = LibDebugLogger.Create("AutoCategory")
-		AutoCategory.logger:SetEnabled(true)
-	end
+	--if LibDebugLogger then
+	--	AutoCategory.logger = LibDebugLogger.Create("AutoCategory")
+	--	AutoCategory.logger:SetEnabled(true)
+	--end
 
 	AutoCategory.meta = SF.safeTable(AutoCategory.meta)
 	SF.addonMeta(AutoCategory.meta,"AutoCategory")
@@ -1015,6 +1019,7 @@ end
 
 FENCE_KEYBOARD.OnEnterLaunder = ZO_Fence_Keyboard.OnEnterLaunder
 FENCE_MANAGER:RegisterCallback("FenceEnterLaunder", function(totalLaunders, laundersUsed) 
-	FENCE_KEYBOARD:OnEnterLaunder(totalLaunders, laundersUsed) end)
+	FENCE_KEYBOARD:OnEnterLaunder(totalLaunders, laundersUsed) 
+	end)
 
 --[[ End of replicated/modified fence_keyboard.lua code from ZOS]]
