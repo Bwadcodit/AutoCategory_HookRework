@@ -261,7 +261,10 @@ function AC_UI.BagSet_SelectBag_LAM:controlDef()
 			choicesTooltips = self.cvt.choicesTooltips,
 
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			default = AC_BAG_TYPE_BACKPACK,
 			width = "half",
 			reference = self:getControlName(),
@@ -299,7 +302,10 @@ function AC_UI.BagSet_HideOther_LAM:controlDef()
 			name = SI_AC_MENU_BS_CHECKBOX_UNGROUPED_CATEGORY_HIDDEN,
 			tooltip = SI_AC_MENU_BS_CHECKBOX_UNGROUPED_CATEGORY_HIDDEN_TOOLTIP,
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+			end,
 			default = false,
 			width = "half",
 			reference = self:getControlName(),
@@ -343,7 +349,10 @@ function AC_UI.BagSet_HideCat_LAM:controlDef()
 			name = SI_AC_MENU_BS_CHECKBOX_CATEGORY_HIDDEN,
 			tooltip = SI_AC_MENU_BS_CHECKBOX_CATEGORY_HIDDEN_TOOLTIP,
 			getFunc = function()	return self:getValue() end,
-			setFunc = function(value)  self:setValue(value) end,
+			setFunc = function(value)  
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			disabled = function()
 				if BagSet_SelectRule_LAM:getValue() == nil then
 					return true
@@ -415,7 +424,10 @@ function AC_UI.BagSet_SelectRule_LAM:controlDef()
 			choicesTooltips = self.cvt.choicesTooltips,
 
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			disabled = function() return self:size() == 0 end,
 			width = "half",
 			reference = self:getControlName(),
@@ -471,7 +483,10 @@ function AC_UI.BagSet_Priority_LAM:controlDef()
 			min = self.minVal,
 			max = self.maxVal,
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			disabled = function()
 				if BagSet_SelectRule_LAM:getValue() == nil then
 					return true
@@ -590,7 +605,10 @@ function AC_UI.AddCat_SelectTag_LAM:controlDef()
 			getFunc = function()
 				return self:getValue()
 			end,
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			width = "half",
 			disabled = function() return self.cvt:size() == 0 end,
 			reference = self:getControlName(),
@@ -660,7 +678,10 @@ function AC_UI.AddCat_SelectRule_LAM:controlDef()
 			sort = "name-up",
 
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			disabled = function() return self:size() == 0 end,
 			width = "half",
 			reference = self:getControlName(),
@@ -807,7 +828,10 @@ function AC_UI.ImpExp_ImportBag_LAM:controlDef()
 			choicesTooltips = self.cvt.choicesTooltips,
 
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) 	self:setValue(value) end,
+			setFunc = function(value) 	
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			default = AC_BAG_TYPE_BACKPACK,
 			width = "half",
 			reference = self:getControlName(),
@@ -840,7 +864,10 @@ function AC_UI.ImpExp_Import_LAM:controlDef()
 			type = "button",
 			name = SI_AC_MENU_IBS_BUTTON_IMPORT,
 			tooltip = SI_AC_MENU_IBS_BUTTON_IMPORT_TOOLTIP,
-			func = function() self:execute() end,
+			func = function() 
+				self:execute()
+				AutoCategory.dirtyRules = true
+				end,
 			disabled = function()
 				return getCurrentBagId() == ImpExp_ImportBag_LAM:getValue()
 			end,
@@ -894,7 +921,10 @@ function AC_UI.CatSet_SelectTag_LAM:controlDef()
 				return self:getValue()
 			end,
 
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			width = "half",
 			disabled = function() return CatSet_SelectTag_LAM:size() == 0 end,
 			reference = self:getControlName(),
@@ -952,7 +982,10 @@ function AC_UI.CatSet_SelectRule_LAM:controlDef()
 				currentRule = AutoCategory.GetRuleByName(self:getValue())
 				return self:getValue()
 			end,
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			disabled = function() return self:size() == 0 end,
 			width = "half",
 			reference = self:getControlName(),
@@ -1109,7 +1142,10 @@ function AC_UI.CatSet_NameEdit_LAM:controlDef()
 			warning = function()
 				return warningDuplicatedName.warningMessage
 			end,
-			setFunc = function(value) self:setValue(value) end,
+			setFunc = function(value) 
+				self:setValue(value) 
+				AutoCategory.dirtyRules = true
+				end,
 			isMultiline = false,
 			disabled = function() return currentRule == nil or AutoCategory.RuleApi.isPredefined(currentRule) end,
 			width = "half",
@@ -1185,7 +1221,10 @@ function AC_UI.CatSet_TagEdit_LAM:controlDef()
 		name = SI_AC_MENU_EC_EDITBOX_TAG,
 		tooltip = SI_AC_MENU_EC_EDITBOX_TAG_TOOLTIP,
 		getFunc = function() return self:getValue() end,
-		setFunc = function(value) self:setValue(value) end,
+		setFunc = function(value) 
+			self:setValue(value) 
+			AutoCategory.dirtyRules = true
+			end,
 		isMultiline = false,
 		disabled = function() return currentRule == nil or AutoCategory.RuleApi.isPredefined(currentRule) end,
 		width = "half",
@@ -1650,10 +1689,13 @@ function AutoCategory.AddonMenuInit()
 					func = function() RequestOpenUnsafeURL("https://github.com/Shadowfen/AutoCategory/wiki/Creating-Custom-Categories") end,
 					width = "half",
 				},
+
                 -- Delete Category/Rule Button
 				AC_UI.CatSet_DeleteCat_LAM:controlDef(),
+
                 -- Edit Category Title
 				header(SI_AC_MENU_HEADER_EDIT_CATEGORY),
+
                 -- Predefined Text Description
                 {
                     type = "description",
@@ -1661,10 +1703,13 @@ function AutoCategory.AddonMenuInit()
                     --title = SI_AC_MENU_EC_BUTTON_PREDEFINED, -- or string id or function returning a string (optional)
                     width = "full", --or "half" (optional)
                 },
+
                 -- Name EditBox - AC_EDITBOX_EDITRULE_NAME
 				CatSet_NameEdit_LAM:controlDef(),
+
                 -- Tag EditBox - AC_EDITBOX_EDITRULE_TAG
 				CatSet_TagEdit_LAM:controlDef(),
+
                 --Description EditBox
 				{
 					type = "editbox",
@@ -1691,6 +1736,7 @@ function AutoCategory.AddonMenuInit()
 					width = "full",
 					reference = "AC_EDITBOX_EDITRULE_DESC",
 				},
+
                 -- Rule EditBox
 				{
 					type = "editbox",
@@ -1714,6 +1760,7 @@ function AutoCategory.AddonMenuInit()
                         else
                             ruleCheckStatus.good = nil
                         end
+						AutoCategory.dirtyRules = true
                         end,
 					isMultiline = true,
 					isExtraWide = true,
@@ -1721,6 +1768,7 @@ function AutoCategory.AddonMenuInit()
 					width = "full",
 					reference = "AC_EDITBOX_EDITRULE_RULE",
 				},
+
                 -- RuleCheck Text - AutoCategoryCheckText
                 {
                     type = "description",
@@ -1728,6 +1776,7 @@ function AutoCategory.AddonMenuInit()
                     title = ruleCheckStatus.getTitle, -- or string id or function returning a string (optional)
                     width = "half", --or "half" (optional)
                 },
+
                 -- RuleCheck Button
 				{
 					type = "button",
@@ -1742,12 +1791,14 @@ function AutoCategory.AddonMenuInit()
 		    },
 
 		},
+
         -- General Settings
         {
             type = "submenu",
             name = SI_AC_MENU_SUBMENU_GENERAL_SETTING,
             reference = "AC_MENU_SUBMENU_GENERAL_SETTING",
             controls = {
+
                 -- Show message when toggle
                 {
                     type = "checkbox",
@@ -1756,6 +1807,7 @@ function AutoCategory.AddonMenuInit()
                     getFunc = function() return AutoCategory.saved.general["SHOW_MESSAGE_WHEN_TOGGLE"] end,
                     setFunc = function(value) AutoCategory.saved.general["SHOW_MESSAGE_WHEN_TOGGLE"] = value end,
                 },
+
                 -- Show category item count
                 {
                     type = "checkbox",
@@ -1769,6 +1821,7 @@ function AutoCategory.AddonMenuInit()
 						AutoCategory.saved.general["SHOW_CATEGORY_ITEM_COUNT"] = value
 						end,
                 },
+
                 -- Show category collapse icon
                 {
                     type = "checkbox",
@@ -1782,6 +1835,7 @@ function AutoCategory.AddonMenuInit()
                     	AutoCategory.RefreshCurrentList(true)
                     end,
                 },
+
                 -- Save category collapse status
                 {
                     type = "checkbox",
@@ -1791,6 +1845,7 @@ function AutoCategory.AddonMenuInit()
                     setFunc = function(value) AutoCategory.saved.general["SAVE_CATEGORY_COLLAPSE_STATUS"] = value end,
                     disabled = function() return AutoCategory.saved.general["SHOW_CATEGORY_COLLAPSE_ICON"] == false end,
                 },
+
                 -- Show category "SET ()"
                 {
                     type = "checkbox",
@@ -1811,7 +1866,9 @@ function AutoCategory.AddonMenuInit()
             reference = "AC_SUBMENU_APPEARANCE_SETTING",
             controls = {
 				description(SF.ColorText(L(SI_AC_MENU_AS_DESCRIPTION_REFRESH_TIP), SF.hex.mocassin)),
-                divider(),
+                
+				divider(),
+
                 -- Category Text Font
                 {
                     type = 'dropdown',
@@ -1826,6 +1883,7 @@ function AutoCategory.AddonMenuInit()
                     end,
                     scrollable = 7,
                 },
+
                 -- Category Text Style
                 {
                     type = 'dropdown',
@@ -1839,6 +1897,7 @@ function AutoCategory.AddonMenuInit()
                     end,
                     scrollable = 7,
                 },
+
                 -- Category Text Alignment
                 {
                     type = 'dropdown',
@@ -1853,6 +1912,7 @@ function AutoCategory.AddonMenuInit()
                     end,
                     scrollable = 7,
                 },
+
                 -- Category Text Font Size
                 {
                     type = 'slider',
@@ -1866,6 +1926,7 @@ function AutoCategory.AddonMenuInit()
                         AutoCategory.saved.appearance["CATEGORY_FONT_SIZE"] = v
                     end,
                 },
+
                 -- Category Text Color
                 {
                     type = 'colorpicker',
@@ -1882,6 +1943,7 @@ function AutoCategory.AddonMenuInit()
                     widgetRightAlign		= true,
                     widgetPositionAndResize	= -15,
                 },
+
                 -- Hidden Category Text Color
                 {
                     type = 'colorpicker',
@@ -1898,6 +1960,7 @@ function AutoCategory.AddonMenuInit()
                     widgetRightAlign		= true,
                     widgetPositionAndResize	= -15,
                 },
+
                 -- Category Ungrouped Title EditBox
                 {
                     type = "editbox",
@@ -1909,6 +1972,7 @@ function AutoCategory.AddonMenuInit()
                     setFunc = function(value) AutoCategory.saved.appearance["CATEGORY_OTHER_TEXT"] = value end,
                     width = "full",
                 },
+
                 -- Category Header Height
                 {
                     type = 'slider',
@@ -1926,6 +1990,7 @@ function AutoCategory.AddonMenuInit()
                 },
             },
         },
+
 		-- Gamepad settings
 		{
             type = "submenu",
@@ -1934,6 +1999,7 @@ function AutoCategory.AddonMenuInit()
             controls = {
 				description(SF.ColorText(L(SI_AC_MENU_GMS_DESCRIPTION_TIP), SF.hex.mocassin)),
                 divider(),
+
                 {
                     type = "checkbox",
                     name = SI_AC_MENU_GMS_CHECKBOX_ENABLE_GAMEPAD,
@@ -1942,6 +2008,7 @@ function AutoCategory.AddonMenuInit()
                     getFunc = function() return AutoCategory.saved.general["ENABLE_GAMEPAD"] end,
                     setFunc = function(value) AutoCategory.saved.general["ENABLE_GAMEPAD"] = value end,
                 },
+
 				{
                     type = "checkbox",
                     name = SI_AC_MENU_GMS_CHECKBOX_EXTENDED_GAMEPAD_SUPPLIES,

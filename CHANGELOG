@@ -1,4 +1,15 @@
 
+[COLOR="DeepSkyBlue"]4.3.5 (113)[/COLOR]:
+[LIST]
+[*] Reduced number of times that rules are run on the inventories to speed up processing.
+[*] Look for changes in rule configurations to control how much work must be done.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]4.3.4 (112)[/COLOR]:
+[LIST]
+[*] Modified operation of callback for LAM_PanelClose to reduce processing.
+[/LIST]
+
 [COLOR="DeepSkyBlue"]4.3.3 (111)[/COLOR]:
 [LIST]
 [*] Fixed error at AutoCategory_API.lua:187 reported by robayche.
