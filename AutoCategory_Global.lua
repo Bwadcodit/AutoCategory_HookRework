@@ -9,7 +9,7 @@ local SF = LibSFUtils
  
 AutoCategory = {
     name = "AutoCategory",
-    version = "4.3.5",
+    version = "4.3.6",
     settingName = "AutoCategory",
     settingDisplayName = "AutoCategory - Revised",
     author = "Shadowfen, crafty35, RockingDice, Friday_the13_rus",
@@ -22,7 +22,6 @@ AutoCategory.RuleFunc = {}  -- internal and plugin rule functions
 AutoCategory.Plugins = {}   -- registered plugins
 AutoCategory.Inited = false -- provided for the API so that external users can tell when initialization is completed
 AutoCategory.Enabled = true -- flag to tell if AutoCategory is turned on or off
-AutoCategory.dirtyRules = false -- signal that the rules configuration has changed since last integration.
 
 -- load in localization strings
 SF.LoadLanguage(AutoCategory_localization_strings, "en")

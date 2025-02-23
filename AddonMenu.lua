@@ -8,7 +8,7 @@ local L = GetString
 
 local CVT = AutoCategory.CVT
 local aclogger = AutoCategory.logger
---local RuleApi = AutoCategory.RuleApi
+local RuleApi = AutoCategory.RuleApi
 --local ARW = AutoCategory.ARW
 --local RulesW = AutoCategory.RulesW
 
@@ -261,10 +261,7 @@ function AC_UI.BagSet_SelectBag_LAM:controlDef()
 			choicesTooltips = self.cvt.choicesTooltips,
 
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) self:setValue(value) end,
 			default = AC_BAG_TYPE_BACKPACK,
 			width = "half",
 			reference = self:getControlName(),
@@ -302,10 +299,7 @@ function AC_UI.BagSet_HideOther_LAM:controlDef()
 			name = SI_AC_MENU_BS_CHECKBOX_UNGROUPED_CATEGORY_HIDDEN,
 			tooltip = SI_AC_MENU_BS_CHECKBOX_UNGROUPED_CATEGORY_HIDDEN_TOOLTIP,
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-			end,
+			setFunc = function(value) self:setValue(value) end,
 			default = false,
 			width = "half",
 			reference = self:getControlName(),
@@ -349,10 +343,7 @@ function AC_UI.BagSet_HideCat_LAM:controlDef()
 			name = SI_AC_MENU_BS_CHECKBOX_CATEGORY_HIDDEN,
 			tooltip = SI_AC_MENU_BS_CHECKBOX_CATEGORY_HIDDEN_TOOLTIP,
 			getFunc = function()	return self:getValue() end,
-			setFunc = function(value)  
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value)  self:setValue(value) end,
 			disabled = function()
 				if BagSet_SelectRule_LAM:getValue() == nil then
 					return true
@@ -424,10 +415,7 @@ function AC_UI.BagSet_SelectRule_LAM:controlDef()
 			choicesTooltips = self.cvt.choicesTooltips,
 
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) self:setValue(value) end,
 			disabled = function() return self:size() == 0 end,
 			width = "half",
 			reference = self:getControlName(),
@@ -483,10 +471,7 @@ function AC_UI.BagSet_Priority_LAM:controlDef()
 			min = self.minVal,
 			max = self.maxVal,
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) self:setValue(value) end,
 			disabled = function()
 				if BagSet_SelectRule_LAM:getValue() == nil then
 					return true
@@ -605,10 +590,7 @@ function AC_UI.AddCat_SelectTag_LAM:controlDef()
 			getFunc = function()
 				return self:getValue()
 			end,
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) self:setValue(value) end,
 			width = "half",
 			disabled = function() return self.cvt:size() == 0 end,
 			reference = self:getControlName(),
@@ -619,6 +601,7 @@ end
 -- customization of BaseDD for AddCat_SelectRule_LAM
 -- ----------------------------------------------------------
 
+-- returns a CVT of all of the known rules of a tag (group) that are not already in the bag
 -- will return empty CVT if no rules match the filter
 function AC_UI.AddCat_SelectRule_LAM.filterRules(bagId, tag)
 	local cache = AutoCategory.cache
@@ -678,10 +661,7 @@ function AC_UI.AddCat_SelectRule_LAM:controlDef()
 			sort = "name-up",
 
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) self:setValue(value) end,
 			disabled = function() return self:size() == 0 end,
 			width = "half",
 			reference = self:getControlName(),
@@ -828,10 +808,7 @@ function AC_UI.ImpExp_ImportBag_LAM:controlDef()
 			choicesTooltips = self.cvt.choicesTooltips,
 
 			getFunc = function() return self:getValue() end,
-			setFunc = function(value) 	
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) 	self:setValue(value) end,
 			default = AC_BAG_TYPE_BACKPACK,
 			width = "half",
 			reference = self:getControlName(),
@@ -864,10 +841,7 @@ function AC_UI.ImpExp_Import_LAM:controlDef()
 			type = "button",
 			name = SI_AC_MENU_IBS_BUTTON_IMPORT,
 			tooltip = SI_AC_MENU_IBS_BUTTON_IMPORT_TOOLTIP,
-			func = function() 
-				self:execute()
-				AutoCategory.dirtyRules = true
-				end,
+			func = function() self:execute() end,
 			disabled = function()
 				return getCurrentBagId() == ImpExp_ImportBag_LAM:getValue()
 			end,
@@ -921,10 +895,7 @@ function AC_UI.CatSet_SelectTag_LAM:controlDef()
 				return self:getValue()
 			end,
 
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) self:setValue(value) end,
 			width = "half",
 			disabled = function() return CatSet_SelectTag_LAM:size() == 0 end,
 			reference = self:getControlName(),
@@ -982,10 +953,7 @@ function AC_UI.CatSet_SelectRule_LAM:controlDef()
 				currentRule = AutoCategory.GetRuleByName(self:getValue())
 				return self:getValue()
 			end,
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) self:setValue(value) end,
 			disabled = function() return self:size() == 0 end,
 			width = "half",
 			reference = self:getControlName(),
@@ -1021,8 +989,10 @@ function AC_UI.CatSet_NewCat_LAM:execute()
 	AddCat_SelectRule_LAM:updateControl()
 	AddCat_SelectTag_LAM:updateControl()
 
-	--AC_UI.RefreshDropdownData()
-    AutoCategory.RulesW.CompileAll(AutoCategory.RulesW)
+	AC_UI.RefreshDropdownData()
+	if newRule and RuleApi.isCompiled(newRule) == nil then
+    	AutoCategory.RulesW.CompileAll(AutoCategory.RulesW)
+	end
 end
 
 function AC_UI.CatSet_NewCat_LAM:controlDef()
@@ -1116,15 +1086,21 @@ function AC_UI.CatSet_NameEdit_LAM:setValue(value)
 		return
 	end
 
-	AutoCategory.renameRule(currentRule.name, value)
+	currentRule.name = AutoCategory.renameRule(currentRule.name, value)
+	AC_UI.AddCat_SelectRule_LAM:assign(AC_UI.AddCat_SelectRule_LAM.filterRules(getCurrentBagId(),currentRule.tag))
+	AC_UI.AddCat_SelectRule_LAM:updateControl()
 
 	--Update drop downs
 	AutoCategory.cacheInitialize()
 	AC_UI.RefreshDropdownData()
 
-	CatSet_SelectRule_LAM:refresh()
-	CatSet_SelectRule_LAM:setValue(currentRule.name)
-	CatSet_SelectRule_LAM:updateControl()
+	--if currentRule ~= nil then
+	--	aclogger:Debug("currentRule is not nil? " )
+	--end
+	--aclogger:Debug("new name - "..currentRule.name)
+	AC_UI.CatSet_SelectRule_LAM:refresh()
+	AC_UI.CatSet_SelectRule_LAM:setValue(currentRule.name)
+	AC_UI.CatSet_SelectRule_LAM:updateControl()
 
 	BagSet_SelectRule_LAM:refresh()
 	BagSet_SelectRule_LAM:setValue(currentRule.name)
@@ -1142,10 +1118,7 @@ function AC_UI.CatSet_NameEdit_LAM:controlDef()
 			warning = function()
 				return warningDuplicatedName.warningMessage
 			end,
-			setFunc = function(value) 
-				self:setValue(value) 
-				AutoCategory.dirtyRules = true
-				end,
+			setFunc = function(value) self:setValue(value) end,
 			isMultiline = false,
 			disabled = function() return currentRule == nil or AutoCategory.RuleApi.isPredefined(currentRule) end,
 			width = "half",
@@ -1221,10 +1194,7 @@ function AC_UI.CatSet_TagEdit_LAM:controlDef()
 		name = SI_AC_MENU_EC_EDITBOX_TAG,
 		tooltip = SI_AC_MENU_EC_EDITBOX_TAG_TOOLTIP,
 		getFunc = function() return self:getValue() end,
-		setFunc = function(value) 
-			self:setValue(value) 
-			AutoCategory.dirtyRules = true
-			end,
+		setFunc = function(value) self:setValue(value) end,
 		isMultiline = false,
 		disabled = function() return currentRule == nil or AutoCategory.RuleApi.isPredefined(currentRule) end,
 		width = "half",
@@ -1722,6 +1692,7 @@ function AutoCategory.AddonMenuInit()
                         return ""
 					end,
 					setFunc = function(value)
+						if not currentRule then return end
                         local oldval = currentRule.description
                         currentRule.description = value
                         if oldval ~= value then
@@ -1760,7 +1731,6 @@ function AutoCategory.AddonMenuInit()
                         else
                             ruleCheckStatus.good = nil
                         end
-						AutoCategory.dirtyRules = true
                         end,
 					isMultiline = true,
 					isExtraWide = true,
