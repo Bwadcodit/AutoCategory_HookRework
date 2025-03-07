@@ -18,7 +18,10 @@ function AutoCategory.EnterBulkMode()
 	AutoCategory.BulkMode = true
 end
 function AutoCategory.ExitBulkMode()
-	AutoCategory.BulkMode = false
+	if AutoCategory.BulkMode and AutoCategory.BulkMode == true then
+		AutoCategory.BulkMode = false
+		AutoCategory.RefreshCurrentList()
+	end
 end
 
 
