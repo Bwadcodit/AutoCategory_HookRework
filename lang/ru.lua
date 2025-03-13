@@ -16,8 +16,8 @@ AutoCategory_localization_strings["ru"] = {
     SI_AC_BAGTYPE_TOOLTIP_BANK = "Банк",
     SI_AC_BAGTYPE_TOOLTIP_GUILDBANK = "Гильдейский банк",
     SI_AC_BAGTYPE_TOOLTIP_CRAFTBAG = "Ремесленная сумка",
-    SI_AC_BAGTYPE_TOOLTIP_CRAFTSTATION = "Разбор/Улучшение на Ремесленной станции", 
-    SI_AC_BAGTYPE_TOOLTIP_HOUSEBANK = "Домашнее хранилище", 
+    SI_AC_BAGTYPE_TOOLTIP_CRAFTSTATION = "Разбор/Улучшение на Ремесленной станции",
+    SI_AC_BAGTYPE_TOOLTIP_HOUSEBANK = "Домашнее хранилище",
 
     SI_AC_ALIGNMENT_LEFT = "Слева",
     SI_AC_ALIGNMENT_CENTER = "По центру",
@@ -34,6 +34,7 @@ AutoCategory_localization_strings["ru"] = {
 
     SI_AC_MENU_BS_CHECKBOX_ACCOUNT_WIDE_SETTING = "Настройки на аккаунт",
     SI_AC_MENU_BS_CHECKBOX_ACCOUNT_WIDE_SETTING_TOOLTIP = "Использовать настройки на аккаунт вместо настроек на персонажа",
+    SI_AC_MENU_HEADER_ACCOUNT_WIDE_SETTING = "Настройки на аккаунт",
 
     SI_AC_MENU_SUBMENU_BAG_SETTING = "|c0066FF[Настройки сумки]|r",
     SI_AC_MENU_BS_DROPDOWN_BAG = "Сумка",
@@ -70,6 +71,7 @@ AutoCategory_localization_strings["ru"] = {
     SI_AC_MENU_HEADER_UNIFY_BAG_SETTINGS = "Унифицировать все настройки сумки",
     SI_AC_MENU_UBS_BUTTON_EXPORT_TO_ALL_BAGS = "Экспорт во все сумки",
     SI_AC_MENU_UBS_BUTTON_EXPORT_TO_ALL_BAGS_TOOLTIP = "Настройки всех сумок будут заменены настройками текущей сумки!",
+    SI_AC_MENU_SUBMENU_IMPORT_EXPORT = "|c0066FF[Импорт & Экспорт]|r",
 
     SI_AC_MENU_SUBMENU_CATEGORY_SETTING = "|c0066FF[Настройка категории]|r",
     SI_AC_MENU_CS_DROPDOWN_TAG = "Тег",
@@ -77,6 +79,7 @@ AutoCategory_localization_strings["ru"] = {
     SI_AC_MENU_CS_DROPDOWN_CATEGORY = "Категория",
 
     SI_AC_MENU_HEADER_EDIT_CATEGORY = "Изменить категорию",
+    SI_AC_MENU_EC_BUTTON_PREDEFINED = "|cFF0000Предустановлено. Только для чтения|r",
     SI_AC_MENU_EC_EDITBOX_NAME = "Название",
     SI_AC_MENU_EC_EDITBOX_NAME_TOOLTIP = "Название не может повторяться.",
     SI_AC_MENU_EC_EDITBOX_TAG = "Тег",
@@ -85,7 +88,6 @@ AutoCategory_localization_strings["ru"] = {
     SI_AC_MENU_EC_EDITBOX_DESCRIPTION_TOOLTIP = "Описание, для чего будет использоваться категория.",
     SI_AC_MENU_EC_EDITBOX_RULE = "Правило",
     SI_AC_MENU_EC_EDITBOX_RULE_TOOLTIP = "Правила будут применяться к сумкам для разбивки по категориям.",
-    SI_AC_MENU_EC_BUTTON_PREDEFINED = "|cFF0000Предустановлено. Только для чтения|r",
     SI_AC_MENU_EC_BUTTON_LEARN_RULES = "Изучить правила",
     SI_AC_MENU_EC_BUTTON_LEARN_RULES_TOOLTIP = "Откроет URL онлайн справки по правилам",
     SI_AC_MENU_EC_BUTTON_NEW_CATEGORY = "Новое",
@@ -105,8 +107,8 @@ AutoCategory_localization_strings["ru"] = {
     SI_AC_MENU_EC_DROPDOWN_CATEGORY_TEXT_FONT = "Шрифт текста категории",
     SI_AC_MENU_EC_DROPDOWN_CATEGORY_TEXT_STYLE = "Стиль текста категории",
     SI_AC_MENU_EC_DROPDOWN_CATEGORY_TEXT_ALIGNMENT = "Выравнивание текста категории",
-    SI_AC_MENU_EC_DROPDOWN_CATEGORY_TEXT_COLOR = "Цвет текста категории",
     SI_AC_MENU_EC_DROPDOWN_CATEGORY_TEXT_FONT_SIZE = "Размер шрифта категории",
+    SI_AC_MENU_EC_DROPDOWN_CATEGORY_TEXT_COLOR = "Цвет текста категории",
     SI_AC_MENU_EC_DROPDOWN_HIDDEN_CATEGORY_TEXT_COLOR = "Цвет текста скрытой категории",
     SI_AC_MENU_EC_EDITBOX_CATEGORY_UNGROUPED_TITLE = "Название категории без группы",
     SI_AC_MENU_EC_EDITBOX_CATEGORY_UNGROUPED_TITLE_TOOLTIP = "Предметы, не попавшие ни в одну категорию, будут добавлены в эту категорию.",
@@ -117,16 +119,13 @@ AutoCategory_localization_strings["ru"] = {
     SI_AC_MENU_GS_CHECKBOX_SHOW_MESSAGE_WHEN_TOGGLE = "Показывать сообщение при включении/выключении",
     SI_AC_MENU_GS_CHECKBOX_SHOW_MESSAGE_WHEN_TOGGLE_TOOLTIP = "Будет показывать сообщение в чате при включении/выключении аддона.",
     SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_ITEM_COUNT = "Показывать количество предметов в категории",
-    SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_ITEM_COUNT_TOOLTIP = "Показывает количество предметов в категории после названия категории", 
+    SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_ITEM_COUNT_TOOLTIP = "Показывает количество предметов в категории после названия категории",
     SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_COLLAPSE_ICON = "Показывать иконку сворачивания категории",
     SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_COLLAPSE_ICON_TOOLTIP = "Показывает иконку для сворачивания/разворачивания категорий.",
     SI_AC_MENU_GS_CHECKBOX_SAVE_CATEGORY_COLLAPSE_STATUS = "Сохранять статус свернутости категории",
     SI_AC_MENU_GS_CHECKBOX_SAVE_CATEGORY_COLLAPSE_STATUS_TOOLTIP = "Сохраняет состояние категорий свернуто/развернуто после выхода или закрытия игры.",
     SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_SET_TITLE = "Показывать 'Комплект(название)' для автокомплектов",
     SI_AC_MENU_GS_CHECKBOX_SHOW_CATEGORY_SET_TITLE_TOOLTIP = "Показывает 'Комплект(название)' вместо 'название' в инвентаре для автокомплектов",
-
-    SI_AC_MENU_SUBMENU_IMPORT_EXPORT = "|c0066FF[Импорт & Экспорт]|r",
-    SI_AC_MENU_HEADER_ACCOUNT_WIDE_SETTING = "Настройки на аккаунт",
 
     SI_AC_MENU_SUBMENU_GAMEPAD_SETTING = "|c0066FF[Настройки для геймпада]|r |c65000b(Только для геймпада)|r",
     SI_AC_MENU_GMS_DESCRIPTION_TIP = "Работают только в режиме геймпада",
@@ -143,7 +142,7 @@ AutoCategory_localization_strings["ru"] = {
     SI_AC_DEFAULT_CATEGORY_BOE= "Привязывается",
     SI_AC_DEFAULT_CATEGORY_BOE_DESC= "Привязываемое снаряжение для обмена",
     SI_AC_DEFAULT_CATEGORY_BOP_TRADEABLE= "Привязывается (таймер)",
-    SI_AC_DEFAULT_CATEGORY_BOP_TRADEABLE_DESC= "Снаряжение, которым можно обменяться в течении определенного времени",
+    SI_AC_DEFAULT_CATEGORY_BOP_TRADEABLE_DESC= "Снаряжение, которым можно обменяться в течение определенного времени",
     SI_AC_DEFAULT_CATEGORY_DECONSTRUCT= "Разбор",
     SI_AC_DEFAULT_CATEGORY_DECONSTRUCT_DESC= "",
     SI_AC_DEFAULT_CATEGORY_EQUIPPING= "Надето",
@@ -202,10 +201,9 @@ AutoCategory_localization_strings["ru"] = {
     SI_BINDING_NAME_TOGGLE_AUTO_CATEGORY= "Переключить Auto Category",
     SI_MESSAGE_TOGGLE_AUTO_CATEGORY_ON="Auto Category: ВКЛ",
     SI_MESSAGE_TOGGLE_AUTO_CATEGORY_OFF="Auto Category: ВЫКЛ",
+
     SI_CONTEXT_MENU_EXPAND = "Развернуть",
     SI_CONTEXT_MENU_COLLAPSE = "Свернуть",
     SI_CONTEXT_MENU_EXPAND_ALL = "Развернуть все",
     SI_CONTEXT_MENU_COLLAPSE_ALL = "Свернуть все",
 }
-
-
