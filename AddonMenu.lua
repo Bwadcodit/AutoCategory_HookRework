@@ -16,29 +16,22 @@ local RuleApi = AutoCategory.RuleApi
 --local cache = AutoCategory.cache
 --local saved = AutoCategory.saved
 
+local auBagSet = AC_UI.BagSet
+local auCatSet = AC_UI.CatSet
+
 -- -------------------------------------------------------
 -- function aliases
 local divider = AC_UI.divider
-local header = AC_UI.header
-local description = AC_UI.description
 
 -- -------------------------------------------------------
 
-local currentRule = AutoCategory.CreateNewRule("","")
+--local currentRule = AutoCategory.CreateNewRule("","")
 
 
-local BagSet_SelectBag_LAM = AC_UI.BagSet_SelectBag_LAM
-local BagSet_SelectRule_LAM = AC_UI.BagSet_SelectRule_LAM
+--local BagSet_SelectBag_LAM = AC_UI.BagSet_SelectBag_LAM
+--local BagSet_SelectRule_LAM = AC_UI.BagSet_SelectRule_LAM
 local AddCat_SelectTag_LAM = AC_UI.AddCat_SelectTag_LAM
-local AddCat_SelectRule_LAM = AC_UI.AddCat_SelectRule_LAM
-
-local CatSet_SelectTag_LAM = AC_UI.CatSet_SelectTag_LAM
-local CatSet_SelectRule_LAM = AC_UI.CatSet_SelectRule_LAM
-
-local function getCurrentBagId()
-	return AC_AI.BagSet_SelectBag_LAM:getValue()
-end
-AutoCategory.getCurrentBagId = getCurrentBagId   -- make available
+--local AddCat_SelectRule_LAM = AC_UI.AddCat_SelectRule_LAM
 
 local warningDuplicatedName = AC_UI.warningDuplicatedName
 
@@ -54,15 +47,8 @@ end
 -- Call refresh() on all BaseDD controls
 function AC_UI.RefreshDropdownData()
 
-	-- refresh selections
-	AC_UI.BagSet_SelectBag_LAM:refresh()
-	AC_UI.AddCat_SelectTag_LAM:refresh()
-	CatSet_SelectTag_LAM:refresh()
-
-	--refresh current dropdown rules
-	AC_UI.BagSet_SelectRule_LAM:refresh()
-	AC_UI.AddCat_SelectRule_LAM:refresh()
-	AC_UI.CatSet_SelectRule_LAM:refresh()
+	auBagSet.refresh()
+	auCatSet.refresh()
 end
 
 -- updates the LAM cvt lists from our BaseDD objects
@@ -74,13 +60,8 @@ function AC_UI.RefreshControls()
 	RCpending = true
 
 	zo_callLater(function()
-		BagSet_SelectRule_LAM:updateControl()
-
-		AddCat_SelectTag_LAM:updateControl()
-		AddCat_SelectRule_LAM:updateControl()
-
-		CatSet_SelectTag_LAM:updateControl()
-		CatSet_SelectRule_LAM:updateControl()
+		auBagSet.updateControls()
+		auCatSet.updateControls()
 		RCPending = false
 	end, waitTime)
 end
@@ -145,12 +126,8 @@ local function CreatePanel()
 			AutoCategory.UpdateCurrentSavedVars()	-- needed if swap acctwide on/off
 			AutoCategory.cacheInitialize()
 
-			BagSet_SelectBag_LAM:select(AC_BAG_TYPE_BACKPACK)
-			BagSet_SelectRule:clearIndex()
-			AddCat_SelectTag_LAM:clearIndex()
-			AddCat_SelectRule_LAM:clearIndex()
-			CatSet_SelectTag_LAM:clearIndex()
-			CatSet_SelectRule_LAM:clearIndex()
+			auBagSet.clear()
+			auCatSet.clear()
 
 			AC_UI.RefreshDropdownData()
 			AC_UI.RefreshControls()
@@ -178,8 +155,8 @@ function AutoCategory.AddonMenuInit()
 	aclogger = AutoCategory.logger
     AutoCategory.cacheInitialize()
 
-	AC_UI.BagSetInit()
-	AC_UI.CatSetInit()
+	auBagSet.Init()
+	auCatSet.Init()
 
 	AC_UI.RefreshDropdownData()
 	AC_UI.RefreshControls()
@@ -200,13 +177,8 @@ function AutoCategory.AddonMenuInit()
                 AutoCategory.charSaved.accountWide = value
                 AutoCategory.UpdateCurrentSavedVars()	-- needed if swap acctwide on/off
 
-				AC_UI.BagSet_SelectBag_LAM:select(AC_BAG_TYPE_BACKPACK)
-				AC_UI.BagSet_SelectRule_LAM:clearIndex()
-                AC_UI.AddCat_SelectTag_LAM:clearIndex()
-                AC_UI.AddCat_SelectRule_LAM:clearIndex()
-                CatSet_SelectTag_LAM:clearIndex()
-                CatSet_SelectRule_LAM:clearIndex()
-                AC_UI.CatSet.clearRuleCheckStatus()
+				auBagSet.clear()
+				auCatSet.clear()
 
                 AC_UI.RefreshDropdownData()
 				AC_UI.RefreshControls()
@@ -214,10 +186,10 @@ function AutoCategory.AddonMenuInit()
         },
         divider(),
 		-- Bag Settings
-		AC_UI.BagSet.controlDef(),
+		auBagSet.controlDef(),
 
         -- Category Settings
-		AC_UI.CatSet.controlDef(),
+		auCatSet.controlDef(),
 
         -- General Settings
 		AC_UI.GeneralMenu,

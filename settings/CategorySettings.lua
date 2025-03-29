@@ -6,6 +6,8 @@ local aclogger
 local L = GetString
 local CVT = AutoCategory.CVT
 
+local auBagSet = AC_UI.BagSet
+
 local CatSet_SelectTag_LAM = AC.BaseDD:New("AC_DROPDOWN_EDITRULE_TAG") -- only uses choices
 AC_UI.CatSet_SelectTag_LAM = CatSet_SelectTag_LAM
 
@@ -13,12 +15,12 @@ local CatSet_SelectRule_LAM = AC.BaseDD:New("AC_DROPDOWN_EDITRULE_RULE", nil,  C
 AC_UI.CatSet_SelectRule_LAM = CatSet_SelectRule_LAM
 
 -- local to this screen
-local CatSet_NewCat_LAM = AC.BaseUI:New() 	-- button
-AC_UI.CatSet_NewCat_LAM = CatSet_NewCat_LAM
+local catSet_NewCat_LAM = AC.BaseUI:New() 	-- button
+AC_UI.CatSet_NewCat_LAM = catSet_NewCat_LAM
 
 -- local to this screen
-local CatSet_CopyCat_LAM = AC.BaseUI:New() 	-- button
-AC_UI.CatSet_CopyCat_LAM = CatSet_CopyCat_LAM
+local catSet_CopyCat_LAM = AC.BaseUI:New() 	-- button
+AC_UI.CatSet_CopyCat_LAM = catSet_CopyCat_LAM
 
 -- local to this screen
 local CatSet_DeleteCat_LAM = AC.BaseUI:New()	-- button
@@ -36,6 +38,8 @@ AC_UI.CatSet_TagEdit_LAM = CatSet_TagEdit_LAM
 local AC_EMPTY_TAG_NAME = L(SI_AC_DEFAULT_NAME_EMPTY_TAG)
 
 AC_UI.CatSet = {}
+
+local currentRule = AutoCategory.CreateNewRule("","")
 
 --warning message
 local warningDuplicatedName = {
@@ -246,9 +250,9 @@ function AC_UI.CatSet_SelectRule_LAM:controlDef()
 end
 -- -------------------------------------------------------
 
--- customization of BaseUI for CatSet_NewCat_LAM button
+-- customization of BaseUI for catSet_NewCat_LAM button
 -- -------------------------------------------------------
-function AC_UI.CatSet_NewCat_LAM:execute()
+function catSet_NewCat_LAM:execute()
 	local newName = AutoCategory.GetUsableRuleName(L(SI_AC_DEFAULT_NAME_NEW_CATEGORY))
 	local tag = CatSet_SelectTag_LAM:getValue()
 	if tag == "" then
@@ -271,16 +275,15 @@ function AC_UI.CatSet_NewCat_LAM:execute()
 	AC_UI.AddCat_SelectTag_LAM:setValue(currentRule.tag)
 	AC_UI.AddCat_SelectRule_LAM:assign(AC_UI.AddCat_SelectRule_LAM.filterRules(getCurrentBagId(),currentRule.tag))
 	AC_UI.AddCat_SelectTag_LAM:refresh()
-	AC_UI.AddCat_SelectRule_LAM:updateControl()
-	AC_UI.AddCat_SelectTag_LAM:updateControl()
+	AC_UI.BagSet.updateControls()
 
 	AC_UI.RefreshDropdownData()
-	if newRule and RuleApi.isCompiled(newRule) == nil then
+	if currentRule and AutoCategory.RuleApi.isCompiled(currentRule) == nil then
     	AutoCategory.RulesW.CompileAll(AutoCategory.RulesW)
 	end
 end
 
-function AC_UI.CatSet_NewCat_LAM:controlDef()
+function catSet_NewCat_LAM:controlDef()
 	-- New Category Button
 	return
 		{
@@ -293,9 +296,9 @@ function AC_UI.CatSet_NewCat_LAM:controlDef()
 end
 -- -------------------------------------------------------
 
--- customization of BaseUI for CatSet_CopyCat_LAM button
+-- customization of BaseUI for catSet_CopyCat_LAM button
 -- -------------------------------------------------------
-function AC_UI.CatSet_CopyCat_LAM:execute()
+function catSet_CopyCat_LAM:execute()
 	local ruleName = CatSet_SelectRule_LAM:getValue()	-- source
 	local tag = CatSet_SelectTag_LAM:getValue()
 	if tag == "" then
@@ -321,9 +324,12 @@ function AC_UI.CatSet_CopyCat_LAM:execute()
 
 
     AutoCategory.RulesW.CompileAll(AutoCategory.RulesW)
+	-- Add the rule to the bagSet Add Category dropdown and perform appropriate updates
+	AC_UI.AddCat_SelectRule_LAM:assign(AC_UI.AddCat_SelectRule_LAM.filterRules(getCurrentBagId(),currentRule.tag))
+	AC_UI.BagSet.updateControls()
 end
 
-function AC_UI.CatSet_CopyCat_LAM:controlDef()
+function catSet_CopyCat_LAM:controlDef()
 	-- Copy Category/Rule Button
 	return
 		{
@@ -392,9 +398,7 @@ function AC_UI.CatSet_NameEdit_LAM:setValue(value)
 	CatSet_SelectRule_LAM:setValue(currentRule.name)
 	CatSet_SelectRule_LAM:updateControl()
 
-	AC_UI.BagSet_SelectRule_LAM:refresh()
-	AC_UI.BagSet_SelectRule_LAM:setValue(currentRule.name)
-	AC_UI.BagSet_SelectRule_LAM:updateControl()
+	auBagSet.SelectRule(currentRule.name)
 end
 
 function AC_UI.CatSet_NameEdit_LAM:controlDef()
@@ -606,10 +610,10 @@ function AC_UI.CatSet.controlDef()
             description(SI_AC_MENU_CS_CREATENEW_DESC),
 
             -- New Category Button
-            CatSet_NewCat_LAM:controlDef(),
+            catSet_NewCat_LAM:controlDef(),
 
             -- Copy Category/Rule Button
-            CatSet_CopyCat_LAM:controlDef(),
+            catSet_CopyCat_LAM:controlDef(),
 
             -- Learn Rules button
             {
@@ -719,9 +723,36 @@ function AC_UI.CatSet.controlDef()
 
 end
 
+function AC_UI.CatSet.clear()
+	CatSet_SelectTag_LAM:clearIndex()
+	CatSet_SelectRule_LAM:clearIndex()
+	AC_UI.CatSet.clearRuleCheckStatus()
+end
+
+function AC_UI.CatSet.refresh()
+	-- refresh selections
+	CatSet_SelectTag_LAM:refresh()
+
+	--refresh current dropdown rules
+	CatSet_SelectRule_LAM:refresh()
+end
+
+function AC_UI.CatSet.updateControls()
+	CatSet_SelectTag_LAM:updateControl()
+	CatSet_SelectRule_LAM:updateControl()
+end
+
+function AC_UI.CatSet.setRule(rule)
+	CatSet_SelectTag_LAM:refresh()
+	CatSet_SelectTag_LAM:setValue(rule.tag)
+
+	CatSet_SelectRule_LAM:refresh()
+	CatSet_SelectRule_LAM:setValue(rule.name)
+	CatSet_SelectRule_LAM:updateControl()
+end
 -- -------------------------------------------------------
 
-function AC_UI.CatSetInit()
+function AC_UI.CatSet.Init()
 	aclogger = AutoCategory.logger
     CatSet_SelectTag_LAM:assign( { choices=AutoCategory.RulesW.tags} )
 end

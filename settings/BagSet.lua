@@ -56,8 +56,8 @@ local BagSet_EditCat_LAM = AC.BaseUI:New()	-- button
 AC_UI.BagSet_EditCat_LAM = BagSet_EditCat_LAM
 
 -- local to this screen
-local BagSet_RemoveCat_LAM = AC.BaseUI:New()	-- button
-AC_UI.BagSet_RemoveCat_LAM = BagSet_RemoveCat_LAM
+local bagSet_RemoveCat_LAM = AC.BaseUI:New()	-- button
+--AC_UI.BagSet_RemoveCat_LAM = bagSet_RemoveCat_LAM
 
 -- AC_UI.BagSet_OrderCat_LAM is defined in OrderListUI.lua
 --local BagSet_OrderCat_LAM = AC_UI.BagSet_OrderCat_LAM
@@ -96,10 +96,11 @@ AC_UI.BagSet = {}
 local currentBagRule = nil
 local function CatSet_DisplayRule(rule)
 	AC_UI.CatSet_SelectTag_LAM:refresh()
-	AC_UI.CatSet_SelectTag_LAM:setValue(rule.tag)
+	--AC_UI.CatSet_SelectTag_LAM:setValue(rule.tag)
 
 	AC_UI.CatSet_SelectRule_LAM:refresh()
-	AC_UI.CatSet_SelectRule_LAM:setValue(rule.name)
+	AC_UI.CatSet.setRule(rule)		-- sets tag and name
+	--AC_UI.CatSet_SelectRule_LAM:setValue(rule.name)
 	AC_UI.CatSet_SelectRule_LAM:updateControl()
 
 	currentRule = rule
@@ -432,9 +433,9 @@ function AC_UI.BagSet_EditCat_LAM:controlDef()
 end
 -- ----------------------------------------------------------
 
--- customization of BaseUI for BagSet_RemoveCat_LAM Button
+-- customization of BaseUI for bagSet_RemoveCat_LAM Button
 -- ----------------------------------------------------------
-function AC_UI.BagSet_RemoveCat_LAM:execute()
+function bagSet_RemoveCat_LAM:execute()
 	local bagId = getCurrentBagId()
 	local ruleName = currentBagRule or BagSet_SelectRule_LAM:getValue()
 	local savedbag = AutoCategory.saved.bags[bagId]
@@ -458,7 +459,7 @@ function AC_UI.BagSet_RemoveCat_LAM:execute()
 	AC_UI.RefreshControls()
 end
 
-function AC_UI.BagSet_RemoveCat_LAM:controlDef()
+function bagSet_RemoveCat_LAM:controlDef()
 	-- Remove Category from Bag Button
 	return
 		{
@@ -472,87 +473,7 @@ function AC_UI.BagSet_RemoveCat_LAM:controlDef()
 
 end
 
-function AC_UI.BagSet.controlDef()
-	-- Bag Settings Section Submenu
-	return {
-		type = "submenu",
-		name = SI_AC_MENU_SUBMENU_BAG_SETTING, -- or string id or function returning a string
-		reference = "AC_SUBMENU_BAG_SETTING",
-		controls = {
-			-- Select bag
-			BagSet_SelectBag_LAM:controlDef(),
 
-			-- Hide ungrouped in bag Checkbox
-			BagSet_HideOther_LAM:controlDef(),
-
-			AC_UI.divider(),
-
-			-- Rule name   - AC_DROPDOWN_EDITBAG_RULE
-			BagSet_SelectRule_LAM:controlDef(),
-
-			-- Priority Slider
-			BagSet_Priority_LAM:controlDef(),
-
-			-- Hide Category Checkbox
-			BagSet_HideCat_LAM:controlDef(),
-			-- blank "pad" for Hide Category button
-			{
-				type = "custom",
-				width = "half",
-			},
-
-			-- Edit Category Button
-			BagSet_EditCat_LAM:controlDef(),
-			-- Remove Category from Bag Button
-			BagSet_RemoveCat_LAM:controlDef(),
-
-			--AC_UI.BagSet_OrderCat_LAM:controlDef(),
-
-			-- Add Category to Bag Section
-			AC_UI.header(SI_AC_MENU_HEADER_ADD_CATEGORY),
-			-- Select Tag Dropdown - AC_DROPDOWN_ADDCATEGORY_TAG
-			AC_UI.AddCat_SelectTag_LAM:controlDef(),
-			-- Categories currently unused dropdown - AC_DROPDOWN_ADDCATEGORY_RULE
-			AddCat_SelectRule_LAM:controlDef(),
-			-- Edit Rule Category Button
-			AddCat_EditRule_LAM:controlDef(),
-			-- Add to Bag Button
-			AddCat_BagAdd_LAM:controlDef(),
-
-			--AC_UI.divider(),
-			--AC_UI.BagSet_DisplayCat_LAM:controlDef(),
-
-			AC_UI.divider(),
-			-- Import/Export Bag Settings
-			{
-				type = "submenu",
-				name = SI_AC_MENU_SUBMENU_IMPORT_EXPORT,
-				reference = "SI_AC_MENU_SUBMENU_IMPORT_EXPORT",
-				controls = {
-					AC_UI.header(SI_AC_MENU_HEADER_UNIFY_BAG_SETTINGS),
-
-					-- Export To All Bags Button
-					ImpExp_ExportAll_LAM:controlDef(),
-					AC_UI.header(SI_AC_MENU_HEADER_IMPORT_BAG_SETTING),
-
-					-- Import From Bag - AC_DROPDOWN_IMPORTBAG_BAG
-					ImpExp_ImportBag_LAM:controlDef(),
-
-					-- Import Button
-					ImpExp_Import_LAM:controlDef(),
-				},
-			},
-			AC_UI.divider(),
-			-- Need Help button
-			{
-				type = "button",
-				name = SI_AC_MENU_AC_BUTTON_NEED_HELP,
-				func = function() RequestOpenUnsafeURL("https://github.com/Shadowfen/AutoCategory/wiki/Tutorial") end,
-				width = "full",
-			},
-		},
-	}
-end	
 -- ----------------------------------------------------------
 
 
@@ -851,8 +772,122 @@ function AC_UI.ImpExp_Import_LAM:controlDef()
 end
 -- -------------------------------------------------------
 
+function AC_UI.BagSet.controlDef()
+	-- Bag Settings Section Submenu
+	return {
+		type = "submenu",
+		name = SI_AC_MENU_SUBMENU_BAG_SETTING, -- or string id or function returning a string
+		reference = "AC_SUBMENU_BAG_SETTING",
+		controls = {
+			-- Select bag
+			BagSet_SelectBag_LAM:controlDef(),
 
-function AC_UI.BagSetInit()
+			-- Hide ungrouped in bag Checkbox
+			BagSet_HideOther_LAM:controlDef(),
+
+			AC_UI.divider(),
+
+			-- Rule name   - AC_DROPDOWN_EDITBAG_RULE
+			BagSet_SelectRule_LAM:controlDef(),
+
+			-- Priority Slider
+			BagSet_Priority_LAM:controlDef(),
+
+			-- Hide Category Checkbox
+			BagSet_HideCat_LAM:controlDef(),
+			-- blank "pad" for Hide Category button
+			{
+				type = "custom",
+				width = "half",
+			},
+
+			-- Edit Category Button
+			BagSet_EditCat_LAM:controlDef(),
+			-- Remove Category from Bag Button
+			bagSet_RemoveCat_LAM:controlDef(),
+
+			--AC_UI.BagSet_OrderCat_LAM:controlDef(),
+
+			-- Add Category to Bag Section
+			AC_UI.header(SI_AC_MENU_HEADER_ADD_CATEGORY),
+			-- Select Tag Dropdown - AC_DROPDOWN_ADDCATEGORY_TAG
+			AC_UI.AddCat_SelectTag_LAM:controlDef(),
+			-- Categories currently unused dropdown - AC_DROPDOWN_ADDCATEGORY_RULE
+			AddCat_SelectRule_LAM:controlDef(),
+			-- Edit Rule Category Button
+			AddCat_EditRule_LAM:controlDef(),
+			-- Add to Bag Button
+			AddCat_BagAdd_LAM:controlDef(),
+
+			--AC_UI.divider(),
+			--AC_UI.BagSet_DisplayCat_LAM:controlDef(),
+
+			AC_UI.divider(),
+			-- Import/Export Bag Settings
+			{
+				type = "submenu",
+				name = SI_AC_MENU_SUBMENU_IMPORT_EXPORT,
+				reference = "SI_AC_MENU_SUBMENU_IMPORT_EXPORT",
+				controls = {
+					AC_UI.header(SI_AC_MENU_HEADER_UNIFY_BAG_SETTINGS),
+
+					-- Export To All Bags Button
+					ImpExp_ExportAll_LAM:controlDef(),
+					AC_UI.header(SI_AC_MENU_HEADER_IMPORT_BAG_SETTING),
+
+					-- Import From Bag - AC_DROPDOWN_IMPORTBAG_BAG
+					ImpExp_ImportBag_LAM:controlDef(),
+
+					-- Import Button
+					ImpExp_Import_LAM:controlDef(),
+				},
+			},
+			AC_UI.divider(),
+			-- Need Help button
+			{
+				type = "button",
+				name = SI_AC_MENU_AC_BUTTON_NEED_HELP,
+				func = function() RequestOpenUnsafeURL("https://github.com/Shadowfen/AutoCategory/wiki/Tutorial") end,
+				width = "full",
+			},
+		},
+	}
+end	
+
+function AC_UI.BagSet.clear()				
+	AC_UI.BagSet_SelectBag_LAM:select(AC_BAG_TYPE_BACKPACK)
+	AC_UI.BagSet_SelectRule_LAM:clearIndex()
+	AC_UI.AddCat_SelectTag_LAM:clearIndex()
+	AC_UI.AddCat_SelectRule_LAM:clearIndex()
+end
+
+function AC_UI.BagSet.refresh()
+	-- refresh selections
+	AC_UI.BagSet_SelectBag_LAM:refresh()
+	AC_UI.AddCat_SelectTag_LAM:refresh()
+
+	--refresh current dropdown rules
+	AC_UI.BagSet_SelectRule_LAM:refresh()
+	AC_UI.AddCat_SelectRule_LAM:refresh()
+	
+end
+
+function AC_UI.BagSet.SelectRule(name)
+	AC_UI.BagSet_SelectRule_LAM:refresh()
+	AC_UI.BagSet_SelectRule_LAM:setValue(name)
+	AC_UI.BagSet_SelectRule_LAM:updateControl()
+end
+
+function AC_UI.BagSet.updateControls()
+	BagSet_SelectRule_LAM:updateControl()
+
+	AddCat_SelectTag_LAM:updateControl()
+	AC_UI.AddCat_SelectRule_LAM:refresh()
+	AddCat_SelectRule_LAM:updateControl()
+end
+
+
+function AC_UI.BagSet.Init()
 	aclogger = AutoCategory.logger
 
     -- initialize tables
