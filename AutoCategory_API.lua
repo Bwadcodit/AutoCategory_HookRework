@@ -1,11 +1,6 @@
---====API====--
---local SF = LibSFUtils
---local AC = AutoCategory
---local RuleApi = AutoCategory.RuleApi
+local SF = LibSFUtils
 
--- aliases
---local saved = AutoCategory.saved
---local aclogger = AutoCategory.logger
+--====API====--
 
 -- For use to tell if AutoCategory has finished its initialization process and
 -- is ready for business. The following variable is nil if AutoCategory is
@@ -31,6 +26,8 @@ end
 -- Convert a ZOS bagId into AutoCategory bag_type_id
 -- returns the bag_type_id enum value 
 --       or nil if bagId is not recognized
+-- Note: We have separate definitions because all of the ZOS HOUSE_BANK types
+-- are supposed to be treated the same by us.
 local BagTypeConversion = {
 	[BAG_BACKPACK]         = AC_BAG_TYPE_BACKPACK,
 	[BAG_WORN]             = AC_BAG_TYPE_BACKPACK,
@@ -46,9 +43,12 @@ local BagTypeConversion = {
 	[BAG_HOUSE_BANK_SIX]   = AC_BAG_TYPE_HOUSEBANK,
 	[BAG_HOUSE_BANK_SEVEN] = AC_BAG_TYPE_HOUSEBANK,
 	[BAG_HOUSE_BANK_EIGHT] = AC_BAG_TYPE_HOUSEBANK,
+	[BAG_FURNITURE_VAULT]  = AC_BAG_TYPE_FURNVAULT
+
 }
+
 -- convert ZOS bag type to AC bag type
-function convert2BagTypeId(bagId, acprimary)
+local function convert2BagTypeId(bagId, acprimary)
 	if acprimary ~= nil then return acprimary end
 	if bagId == nil then return nil end
 	return BagTypeConversion[bagId]
@@ -58,7 +58,7 @@ function AutoCategory.validateBagRules(bagId, acprimary)
 	return AutoCategory.validateACBagRules(convert2BagTypeId(bagId, acprimary))
 end
 
--- Make sure that all of the rules for this bag are valid/undamaged
+-- Make sure that all of the rules for this bag type are valid/undamaged
 -- Do this by bag rather than by rule to avoid repeating this unnecessarily
 -- as the bag of rules is evaluated per each item in the bag.
 -- Do this up front to save time.
@@ -71,18 +71,18 @@ function AutoCategory.validateACBagRules(acBagType)
 	local function checkValidRule(name, rule)
 		if rule == nil or name == nil then return end
 		if rule.name ~= name then 
-			AutoCategory.RuleApi.setError(rule, true,"name mismatch between bagrule and backing rule")
+			rule:setError(true,"name mismatch between bagrule and backing rule")
 			return
 		end
 
 		--local isValid = true
 		if rule.rule == nil then
-			AutoCategory.RuleApi.setError(rule,true,"missing rule definition")
+			rule:setError(true,"missing rule definition")
 			return
 		end
 		local ruleCode = AutoCategory.compiledRules[rule.name]
 		if not ruleCode or type(ruleCode) ~= "function" then
-			AutoCategory.RuleApi.setError(rule, true,"invalid compiled rule function")
+			rule:setError(true,"invalid compiled rule function")
 			AutoCategory.compiledRules[rule.name] = nil
 			return
 		end
@@ -94,7 +94,7 @@ function AutoCategory.validateACBagRules(acBagType)
 	local bag = AutoCategory.saved.bags[acBagType]
 	for i = 1, #bag.rules do
 		local entry = bag.rules[i] 
-		local rule = AutoCategory.BagRuleApi.getBackingRule(entry)
+		local rule = entry:getBackingRule()
 		checkValidRule(entry.name, rule)
 	end
 end
@@ -107,13 +107,18 @@ end
 -- returns
 --   boolean - was a match found?
 --   string  - name of rule matched combined with additionCategoryName, ex. "Set(godly set)"
---   number  - priority of rule
+--   number  - run priority of rule
 --   number -  show priority of rule
 --   enum    - bag type id
 --   boolean - is entry hidden?
 function AutoCategory:MatchCategoryRules( bagId, slotIndex, specialType )
 	-- set up bagId and slotIndex to "pass in" to the rule functions
-	self.checkingItemBagId = bagId
+    self.checking = SF.safeClearTable(self.checking)
+    self.checking.BagId = bagId
+    self.checking.SlotIndex = slotIndex
+    self.checking.ItemLink = GetItemLink(bagId, slotIndex)
+
+    self.checkingItemBagId = bagId
 	self.checkingItemSlotIndex = slotIndex
 	self.checkingItemLink = GetItemLink(bagId, slotIndex)
 
@@ -130,11 +135,11 @@ function AutoCategory:MatchCategoryRules( bagId, slotIndex, specialType )
 			name  = AutoCategory.acctSaved.appearance["CATEGORY_OTHER_TEXT"]
 			return name
 		end
-		if enhancement == "" then
+		if not enhancement or enhancement == "" then
 			-- just use declared category name
 			return name
 
-		elseif AutoCategory.saved.general["SHOW_CATEGORY_SET_TITLE"] == false then
+		elseif AutoCategory.saved.general["SHOW_CATEGORY_SET_TITLE"] == false or self.checkingItemBagId == BAG_FURNITURE_VAULT then
 			-- just use the set name without the category name
 			return enhancement
 
@@ -152,53 +157,47 @@ function AutoCategory:MatchCategoryRules( bagId, slotIndex, specialType )
 	end
 
 	local bag = AutoCategory.saved.bags[bag_type_id]
-	if not bag then
-		return  false, "", 0, 0, nil, nil
-	end
-	if not bag.rules then
+	if not bag or not bag.rules then
 		return  false, "", 0, 0, nil, nil
 	end
 
-	--local dispName = SF.safeTable(AutoCategory.saved.displayName[bag_type_id])
-	--AutoCategory.saved.displayName[bag_type_id] = dispName
 	-- call the rules for this bag against the entry, stop when one matches
-	-- return values from pcall internal func
+	-- return values from SF.safeCall func
 	local lenv = AutoCategory.Environment
-	local showpri = 0
+
+	-- localized aliases
+	local setCategoryCollapsed = AutoCategory.SetCategoryCollapsed
+	local getRuleByName = AutoCategory.GetRuleByName
+	local isCategoryCollapsed = AutoCategory.IsCategoryCollapsed
+	local compiledRules = AutoCategory.compiledRules
+
 	for i = 1, #bag.rules do
 		local entry = bag.rules[i]
 		if entry.name then
-			local rule = AutoCategory.GetRuleByName(entry.name)
+			local rule = getRuleByName(entry.name)
 			if rule and checkValidRule(entry.name, rule) then
-				--AutoCategory.saved.displayName[bag_type_id] = SF.safeTable(AutoCategory.saved.displayName[bag_type_id])
-				--if dispName[entry.name] then
-				--	showpri = 999-dispName[entry.name].showpri
-				--else
-					showpri = entry.priority
-					--dispName[entry.name].showpri = showpri
-				--end
-				local ruleCode = AutoCategory.compiledRules[entry.name]
+				local ruleCode = compiledRules[entry.name]
 				if ruleCode then
 					setfenv( ruleCode, lenv )
 					AutoCategory.AdditionCategoryName = ""	-- this may be changed by autoset() or alphagear
-					local exec_ok, res = pcall( ruleCode )
+					local exec_ok, res = SF.safeCall( ruleCode )
 					if exec_ok then
 						local catname = adjustName(rule.name,
 												AutoCategory.AdditionCategoryName)
-						AutoCategory.SetCategoryCollapsed(bag_type_id, catname,
-							AutoCategory.IsCategoryCollapsed(bag_type_id, catname))
+						setCategoryCollapsed(bag_type_id, catname,
+						isCategoryCollapsed(bag_type_id, catname))
 						if res == true then
 							return true, 
 								catname, 
-								entry.priority, 
-								showpri,
+								entry.runpriority, 
+								entry.showpriority,
 								bag_type_id, 
 								entry.isHidden
 						end
 
 					else
-						AutoCategory.RuleApi.setError(rule, true, res)
-						AutoCategory.compiledRules[entry.name] = nil
+						rule:setError(true, res)
+						compiledRules[entry.name] = nil
 					end
 				end
 			end

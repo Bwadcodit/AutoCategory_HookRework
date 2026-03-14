@@ -1,7 +1,6 @@
-local AC = AutoCategory
-local SF = LibSFUtils
+--local SF = LibSFUtils
 
-local L = GetString
+--local L = GetString
 
 function AC_UI.divider()
 	return {

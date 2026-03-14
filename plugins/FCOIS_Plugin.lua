@@ -595,34 +595,40 @@ function AutoCategory_FCOIS.LoadLanguage(defaultlang)
     if defaultlang == nil then defaultlang = "en" end
     
     -- initialize strings
-    AutoCategory.LoadLanguage(localization_strings,"en")
+    AutoCategory.LoadLanguage(localization_strings,defaultlang)
 end
 
 --Initialize plugin for Auto Category - FCOIS
 function AutoCategory_FCOIS.Initialize()
-	if FCOIS == nil then
-        AutoCategory.AddRuleFunc("fco_ismarked", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("fco_isprotected", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("fco_isgear", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("ismarked", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("isfcoisprotected", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("isfcoisgear", AutoCategory.dummyRuleFunc)
+    -- aliases
+    local AddRuleFunc = AutoCategory.AddRuleFunc
+    local dummyRuleFunc = AutoCategory.dummyRuleFunc
+    local FCOIS_RuleFunc = AutoCategory_FCOIS.RuleFunc
+    if FCOIS then
+        AutoCat_Logger():Info("Initializing FCOIS plugin integration")
+        
+        -- initialize strings
+        AutoCategory_FCOIS.LoadLanguage("en")
+
+        -- load supporting rule functions
+        AddRuleFunc("ismarked", FCOIS_RuleFunc.IsMarked)
+        AddRuleFunc("fco_ismarked", FCOIS_RuleFunc.IsMarked)
+        AddRuleFunc("fco_isprotected", FCOIS_RuleFunc.IsFCOISProtected)
+        AddRuleFunc("isfcoisprotected", FCOIS_RuleFunc.IsFCOISProtected)
+        AddRuleFunc("fco_isgear", FCOIS_RuleFunc.IsFCOISGear)
+        AddRuleFunc("isfcoisgear", FCOIS_RuleFunc.IsFCOISGear)
         return
     end
-	AutoCategory.logger:Warn("Initializing FCOIS plugin integration")
-    
-    -- initialize strings
-    AutoCategory_FCOIS.LoadLanguage("en")
 
-    -- load supporting rule functions
-    AutoCategory.AddRuleFunc("ismarked", AutoCategory_FCOIS.RuleFunc.IsMarked)
-    AutoCategory.AddRuleFunc("fco_ismarked", AutoCategory_FCOIS.RuleFunc.IsMarked)
-    AutoCategory.AddRuleFunc("fco_isprotected", 
-		AutoCategory_FCOIS.RuleFunc.IsFCOISProtected)
-    AutoCategory.AddRuleFunc("isfcoisprotected",
-		AutoCategory_FCOIS.RuleFunc.IsFCOISProtected)
-    AutoCategory.AddRuleFunc("fco_isgear", AutoCategory_FCOIS.RuleFunc.IsFCOISGear)
-    AutoCategory.AddRuleFunc("isfcoisgear", AutoCategory_FCOIS.RuleFunc.IsFCOISGear)
+    -- assign dummy rule functions
+    AddRuleFunc("fco_ismarked", dummyRuleFunc)
+    AddRuleFunc("fco_isprotected", dummyRuleFunc)
+    AddRuleFunc("fco_isgear", dummyRuleFunc)
+    AddRuleFunc("ismarked", dummyRuleFunc)
+    AddRuleFunc("isfcoisprotected", dummyRuleFunc)
+    AddRuleFunc("isfcoisgear", dummyRuleFunc)
+    return
+
 end
 
 local markedTypeMap = {
@@ -741,21 +747,21 @@ function AutoCategory_FCOIS.RuleFunc.IsMarked( ... )
 
 		local arg = select( ax, ... )
 
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+		if arg then
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                table.insert(checkIconIds, arg)
+
+            elseif t_arg == "string" then
+                local v = markedTypeMap[string.lower( arg )]
+                if v then
+                    table.insert(checkIconIds, v)
+                end
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
 		end
 
-		if type( arg ) == "number" then
-			table.insert(checkIconIds, arg)
-
-		elseif type( arg ) == "string" then
-			local v = markedTypeMap[string.lower( arg )]
-			if v then
-				table.insert(checkIconIds, v)
-			end
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
 	end
 	
 	if #checkIconIds ~= 0 then  

@@ -1,34 +1,17 @@
 -- aliases
 local LAM = LibAddonMenu2
-local LMP = LibMediaProvider
 local SF = LibSFUtils
-local AC = AutoCategory
 
---local L = GetString
-
---local CVT = AutoCategory.CVT
-local aclogger
---local RuleApi = AutoCategory.RuleApi
---local ARW = AutoCategory.ARW
---local RulesW = AutoCategory.RulesW
-
-
---local cache = AutoCategory.cache
---local saved = AutoCategory.saved
 
 local auBagSet = AC_UI.BagSet
 local auCatSet = AC_UI.CatSet
+local auAppearanceMenu = AC_UI.AppearanceMenu
 
 -- -------------------------------------------------------
 -- function aliases
 local divider = AC_UI.divider
 
 -- -------------------------------------------------------
-
---local currentRule = AutoCategory.CreateNewRule("","")
-
-
-local AddCat_SelectTag_LAM = AC_UI.AddCat_SelectTag_LAM
 
 local warningDuplicatedName = AC_UI.warningDuplicatedName
 
@@ -50,17 +33,29 @@ end
 
 -- updates the LAM cvt lists from our BaseDD objects
 local RCPending = false
+local function updtcb()
+    auBagSet.updateControls()
+    auCatSet.updateControls()
+    RCPending = false
+end
+local updtCB
 function AC_UI.RefreshControls()
 	local waitTime = 500
+
 	if RCPending then return end
 
-	RCPending = true
+    if not updtCB then
+        updtCB = SF.CallLater:NewSingle(updtcb, waitTime)
+    end
 
-	zo_callLater(function()
+	RCPending = true
+    updtCB:Start()
+	--[[zo_callLater(function()
 		auBagSet.updateControls()
 		auCatSet.updateControls()
 		RCPending = false
 	end, waitTime)
+    --]]
 end
 
 
@@ -133,27 +128,14 @@ local function CreatePanel()
 end
 
 
-function AutoCategory.debugBagTags()
-	AddCat_SelectTag_LAM:assign( { choices=AutoCategory.RulesW.tags })
-	d("AddCat_SelectTag_LAM:")
-	for k, v in pairs(AddCat_SelectTag_LAM.cvt.choices) do
-		if type(v) == "table" then
-			for k1,v1 in pairs(v) do
-				d("k = "..k.."   k1="..k1.."  v1="..SF.str(v1))
-			end
-		else
-		    d("k = "..k.." v= "..SF.str(v))
-		end
-	end
-end
 
-
-function AutoCategory.AddonMenuInit()
-	aclogger = AutoCategory.logger
+function AutoCategory.AddonMenu_Init()
     AutoCategory.cacheInitialize()
 
-	auBagSet.Init()
-	auCatSet.Init()
+	AC_UI.BagSet.Init()
+	AC_UI.DspWin_Init()
+	AC_UI.CatSet_Init()
+	AC_UI.AppearanceMenu_Init()
 
 	AC_UI.RefreshDropdownData()
 	AC_UI.RefreshControls()
@@ -192,7 +174,7 @@ function AutoCategory.AddonMenuInit()
 		AC_UI.GeneralMenu,
 
         -- Appearance Settings
-		AC_UI.AppearanceMenu,		
+		auAppearanceMenu.controlDef(),		
 
 		-- Gamepad settings
 		AC_UI.GamepadMenu,
@@ -203,4 +185,7 @@ function AutoCategory.AddonMenuInit()
 	LAM:RegisterOptionControls("AC_CATEGORY_SETTINGS", optionsTable)
 	CALLBACK_MANAGER:RegisterCallback("LAM-RefreshPanel", RefreshPanel)
 	CALLBACK_MANAGER:RegisterCallback("LAM-PanelControlsCreated", AutoCategory.LengthenRuleBox)
+	CALLBACK_MANAGER:RegisterCallback("LAM-PanelClosed", function() 
+		AutoCategory.dspWin:SetHidden(true)
+	end)
 end

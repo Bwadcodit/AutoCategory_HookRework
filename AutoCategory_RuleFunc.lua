@@ -1,5 +1,27 @@
 local SF = LibSFUtils
-local AC = AutoCategory
+--local AC = AutoCategory
+
+-- aliases
+local GetItemId = GetItemId
+local GetItemStyleName = GetItemStyleName
+local GetZoneNameByIndex = GetZoneNameByIndex
+local GetCurrentMapZoneIndex = GetCurrentMapZoneIndex
+local GetItemLinkItemType = GetItemLinkItemType
+local GetItemLinkName = GetItemLinkName
+local GetItemInfo = GetItemInfo
+local GetItemLinkItemId = GetItemLinkItemId
+local GetItemLinkSetInfo = GetItemLinkSetInfo
+local GetItemTraitInformation = GetItemTraitInformation
+local GetItemLink = GetItemLink
+
+local zo_strlower = zo_strlower
+local t_insert = table.insert
+local GetString = GetString
+
+
+local logDebug = AutoCategory.logDebug
+
+local iter_args = SF.iter_args
 
 
 local specializedItemTypeMap = {
@@ -17,13 +39,17 @@ local specializedItemTypeMap = {
 	["collectible_monster_trophy"] = SPECIALIZED_ITEMTYPE_COLLECTIBLE_MONSTER_TROPHY,
 	["collectible_rare_fish"] = SPECIALIZED_ITEMTYPE_COLLECTIBLE_RARE_FISH,
 	["collectible_style_page"] = SPECIALIZED_ITEMTYPE_COLLECTIBLE_STYLE_PAGE,
+    ["consumable_ability"] = SPECIALIZED_ITEMTYPE_CONSUMABLE_ABILITY,
 	["container"] = SPECIALIZED_ITEMTYPE_CONTAINER,
 	["container_currency"] = SPECIALIZED_ITEMTYPE_CONTAINER_CURRENCY,
 	["container_event"] = SPECIALIZED_ITEMTYPE_CONTAINER_EVENT,
 	["container_style_page"] = SPECIALIZED_ITEMTYPE_CONTAINER_STYLE_PAGE,
+    ["container_stackable"] = SPECIALIZED_ITEMTYPE_CONTAINER_STACKABLE,
 	["costume"] = SPECIALIZED_ITEMTYPE_COSTUME,
-	["crown_item"] = SPECIALIZED_ITEMTYPE_CROWN_ITEM,
-	["crown_repair"] = SPECIALIZED_ITEMTYPE_CROWN_REPAIR,
+    ["crafted_ability"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY,
+    ["crafted_ability_script_primary"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_PRIMARY,
+    ["crafted_ability_script_secondary"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_SECONDARY,
+    ["crafted_ability_script_tertiary"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_TERTIARY,
 	["disguise"] = SPECIALIZED_ITEMTYPE_DISGUISE,
 	["drink_alcoholic"] = SPECIALIZED_ITEMTYPE_DRINK_ALCOHOLIC,
 	["drink_cordial_tea"] = SPECIALIZED_ITEMTYPE_DRINK_CORDIAL_TEA,
@@ -48,10 +74,10 @@ local specializedItemTypeMap = {
 	["food_savoury"] = SPECIALIZED_ITEMTYPE_FOOD_SAVOURY,
 	["food_unique"] = SPECIALIZED_ITEMTYPE_FOOD_UNIQUE,
 	["food_vegetable"] = SPECIALIZED_ITEMTYPE_FOOD_VEGETABLE,
-    ["furnishing_attunable_crafting_station"] = 	
-			SPECIALIZED_ITEMTYPE_FURNISHING_ATTUNABLE_CRAFTING_STATION,
-	["furnishing_crafting_station"] = SPECIALIZED_ITEMTYPE_FURNISHING_CRAFTING_STATION,
-	["furnishing_light"] = SPECIALIZED_ITEMTYPE_FURNISHING_LIGHT,
+    ["furnishing_attunable_station"] = SPECIALIZED_ITEMTYPE_FURNISHING_ATTUNABLE_STATION,
+    ["furnishing_crafting_station"] = SPECIALIZED_ITEMTYPE_FURNISHING_CRAFTING_STATION,
+--    ["furnishing_attunable_crafting_station"] = SPECIALIZED_ITEMTYPE_FURNISHING_ATTUNABLE_CRAFTING_STATION,
+    ["furnishing_light"] = SPECIALIZED_ITEMTYPE_FURNISHING_LIGHT,
 	["furnishing_material_alchemy"] = SPECIALIZED_ITEMTYPE_FURNISHING_MATERIAL_ALCHEMY,
 	["furnishing_material_blacksmithing"] = SPECIALIZED_ITEMTYPE_FURNISHING_MATERIAL_BLACKSMITHING,
 	["furnishing_material_clothier"] = SPECIALIZED_ITEMTYPE_FURNISHING_MATERIAL_CLOTHIER,
@@ -59,14 +85,15 @@ local specializedItemTypeMap = {
 	["furnishing_material_jewelry"] = SPECIALIZED_ITEMTYPE_FURNISHING_MATERIAL_JEWELRYCRAFTING,
 	["furnishing_material_provisioning"] = SPECIALIZED_ITEMTYPE_FURNISHING_MATERIAL_PROVISIONING,
 	["furnishing_material_woodworking"] = SPECIALIZED_ITEMTYPE_FURNISHING_MATERIAL_WOODWORKING,
-	["furnishing_ornamental"] = SPECIALIZED_ITEMTYPE_FURNISHING_ORNAMENTAL,
-	["furnishing_seating"] = SPECIALIZED_ITEMTYPE_FURNISHING_SEATING,
-	["furnishing_target_dummy"] = SPECIALIZED_ITEMTYPE_FURNISHING_TARGET_DUMMY,
+    ["furnishing_seating"] = SPECIALIZED_ITEMTYPE_FURNISHING_SEATING,
+    ["furnishing_ornamental"]= SPECIALIZED_ITEMTYPE_FURNISHING_ORNAMENTAL,
+    ["furnishing_target_dummy"]= SPECIALIZED_ITEMTYPE_FURNISHING_TARGET_DUMMY,
 	["glyph_armor"] = SPECIALIZED_ITEMTYPE_GLYPH_ARMOR,
 	["glyph_jewelry"] = SPECIALIZED_ITEMTYPE_GLYPH_JEWELRY,
 	["glyph_weapon"] = SPECIALIZED_ITEMTYPE_GLYPH_WEAPON,
+    ["group_repair"] = SPECIALIZED_ITEMTYPE_GROUP_REPAIR,
     ["holiday_writ"] = SPECIALIZED_ITEMTYPE_HOLIDAY_WRIT,
-	["ingredient_alcohol"] = SPECIALIZED_ITEMTYPE_INGREDIENT_ALCOHOL,
+    ["ingredient_alcohol"] = SPECIALIZED_ITEMTYPE_INGREDIENT_ALCOHOL,
 	["ingredient_drink_additive"] = SPECIALIZED_ITEMTYPE_INGREDIENT_DRINK_ADDITIVE,
 	["ingredient_food_additive"] = SPECIALIZED_ITEMTYPE_INGREDIENT_FOOD_ADDITIVE,
 	["ingredient_fruit"] = SPECIALIZED_ITEMTYPE_INGREDIENT_FRUIT,
@@ -112,13 +139,13 @@ local specializedItemTypeMap = {
 	["recipe_provisioning_standard_food"] = SPECIALIZED_ITEMTYPE_RECIPE_PROVISIONING_STANDARD_FOOD,
 	["recipe_woodworking_blueprint_furnishing"] = 
 		SPECIALIZED_ITEMTYPE_RECIPE_WOODWORKING_BLUEPRINT_FURNISHING,
-	--["script"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY,
+	["script"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY,
 	["script_focus"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_PRIMARY,
 	["script_signature"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_SECONDARY,
 	["script_affix"] = SPECIALIZED_ITEMTYPE_CRAFTED_ABILITY_SCRIPT_TERTIARY,
 	["scribing ink"] = SPECIALIZED_ITEMTYPE_SCRIBING_INK,
 	["siege_ballista"] = SPECIALIZED_ITEMTYPE_SIEGE_BALLISTA,
-	["siege_battle_standard"] = SPECIALIZED_ITEMTYPE_SIEGE_BATTLE_STANDARD,
+	--["siege_battle_standard"] = SPECIALIZED_ITEMTYPE_SIEGE_BATTLE_STANDARD,
 	["siege_catapult"] = SPECIALIZED_ITEMTYPE_SIEGE_CATAPULT,
 	["siege_graveyard"] = SPECIALIZED_ITEMTYPE_SIEGE_GRAVEYARD,
 	["siege_lancer"] = SPECIALIZED_ITEMTYPE_SIEGE_LANCER,
@@ -147,6 +174,7 @@ local specializedItemTypeMap = {
 	["trophy_survey_report"] = SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT,
 	["trophy_toy"] = SPECIALIZED_ITEMTYPE_TROPHY_TOY,
 	["trophy_treasure_map"] = SPECIALIZED_ITEMTYPE_TROPHY_TREASURE_MAP,
+    ["trophy_tribute_clue"] = SPECIALIZED_ITEMTYPE_TROPHY_TRIBUTE_CLUE,
     ["trophy_upgrade_fragment"] = SPECIALIZED_ITEMTYPE_TROPHY_UPGRADE_FRAGMENT,	
     ["weapon"] = SPECIALIZED_ITEMTYPE_WEAPON,
 	["weapon_booster"] = SPECIALIZED_ITEMTYPE_WEAPON_BOOSTER,
@@ -180,9 +208,13 @@ local itemTypeMap = {
 	["clothier_material"] = ITEMTYPE_CLOTHIER_MATERIAL,
 	["clothier_raw_material"] = ITEMTYPE_CLOTHIER_RAW_MATERIAL,
 	["collectible"] = ITEMTYPE_COLLECTIBLE,
+    ["consumable_ability"] = ITEMTYPE_CONSUMABLE_ABILITY,
 	["container"] = ITEMTYPE_CONTAINER,
 	["container_currency"] = ITEMTYPE_CONTAINER_CURRENCY,
+    ["container_stackable"] = ITEMTYPE_CONTAINER_STACKABLE,
 	["costume"] = ITEMTYPE_COSTUME,
+    ["crafted_ability"] = ITEMTYPE_CRAFTED_ABILITY,
+    ["crafted_ability_script"] = ITEMTYPE_CRAFTED_ABILITY_SCRIPT,
 	["crown_item"] = ITEMTYPE_CROWN_ITEM,
 	["crown_repair"] = ITEMTYPE_CROWN_REPAIR,
 	["deprecated"] = ITEMTYPE_DEPRECATED,
@@ -230,7 +262,6 @@ local itemTypeMap = {
 	["scribing_ink"] = ITEMTYPE_SCRIBING_INK,
 	["siege"] = ITEMTYPE_SIEGE,
 	["soul_gem"] = ITEMTYPE_SOUL_GEM,
---	["spellcrafting_tablet"] = ITEMTYPE_SPELLCRAFTING_TABLET,  -- removed in 41??
 	["spice"] = ITEMTYPE_SPICE,
 	["style_material"] = ITEMTYPE_STYLE_MATERIAL,
 	["tabard"] = ITEMTYPE_TABARD,
@@ -277,11 +308,12 @@ local filterTypeMap = {
 	["miscellaneous"] = ITEMFILTERTYPE_MISCELLANEOUS,
 	["provisioning"] = ITEMFILTERTYPE_PROVISIONING,
 	["quest"] = ITEMFILTERTYPE_QUEST,
-	["quest_quickslot"] = ITEMFILTERTYPE_QUEST_QUICKSLOT,		-- new in 41?
+	["quest_quickslot"] = ITEMFILTERTYPE_QUEST_QUICKSLOT,
 	["quickslot"] = ITEMFILTERTYPE_QUICKSLOT,
-	--["reuse"] = ITEMFILTERTYPE_REUSE,
 	["style_materials"] = ITEMFILTERTYPE_STYLE_MATERIALS,
 	["trait_items"] = ITEMFILTERTYPE_TRAIT_ITEMS,
+    ["unused"] = ITEMFILTERTYPE_UNUSED,
+    ["unused2"] = ITEMFILTERTYPE_UNUSED2,
 	["weapons"] = ITEMFILTERTYPE_WEAPONS,
 	["woodworking"] = ITEMFILTERTYPE_WOODWORKING,
 }
@@ -308,16 +340,16 @@ local equipTypeMap = {
 local qualityMap = {
 	["arcane"] = ITEM_DISPLAY_QUALITY_ARCANE,
 	["artifact"] = ITEM_DISPLAY_QUALITY_ARTIFACT,
-	["legendary"] = ITEM_DISPLAY_QUALITY_LEGENDARY,
 	["mythic"] = ITEM_DISPLAY_QUALITY_MYTHIC_OVERRIDE,
+	["legendary"] = ITEM_DISPLAY_QUALITY_LEGENDARY,
 	["magic"] = ITEM_DISPLAY_QUALITY_MAGIC,
 	["normal"] = ITEM_DISPLAY_QUALITY_NORMAL,
 	["trash"] = ITEM_DISPLAY_QUALITY_TRASH,
 					
 	["blue"] = ITEM_DISPLAY_QUALITY_ARCANE,
 	["purple"] = ITEM_DISPLAY_QUALITY_ARTIFACT,
-	["gold"] = ITEM_DISPLAY_QUALITY_LEGENDARY,
 	["orange"] = ITEM_DISPLAY_QUALITY_MYTHIC_OVERRIDE,
+	["gold"] = ITEM_DISPLAY_QUALITY_LEGENDARY,
 	["green"] = ITEM_DISPLAY_QUALITY_MAGIC,
 	["white"] = ITEM_DISPLAY_QUALITY_NORMAL,
 	["grey"] = ITEM_DISPLAY_QUALITY_TRASH,
@@ -353,12 +385,13 @@ local traitMap = {
 	["armor_training"] = ITEM_TRAIT_TYPE_ARMOR_TRAINING,
 	["armor_vigorous"] = ITEM_TRAIT_TYPE_ARMOR_VIGOROUS,
 	["armor_well_fitted"] = ITEM_TRAIT_TYPE_ARMOR_WELL_FITTED,
-	["deprecated"] = ITEM_TRAIT_TYPE_DEPRECATED,
+--	["deprecated"] = ITEM_TRAIT_TYPE_DEPRECATED,
 	["jewelry_aggressive"] = ITEM_TRAIT_TYPE_JEWELRY_AGGRESSIVE,
 	["jewelry_arcane"] = ITEM_TRAIT_TYPE_JEWELRY_ARCANE,
 	["jewelry_augmented"] = ITEM_TRAIT_TYPE_JEWELRY_AUGMENTED,
    	["jewelry_bloodthirsty"] = ITEM_TRAIT_TYPE_JEWELRY_BLOODTHIRSTY,
    	["jewelry_bolstered"] = ITEM_TRAIT_TYPE_JEWELRY_BOLSTERED,
+    ["jewelry_focused"] = ITEM_TRAIT_TYPE_JEWELRY_FOCUSED,
    	["jewelry_harmony"] = ITEM_TRAIT_TYPE_JEWELRY_HARMONY,
 	["jewelry_healthy"] = ITEM_TRAIT_TYPE_JEWELRY_HEALTHY,
     ["jewelry_infused"] = ITEM_TRAIT_TYPE_JEWELRY_INFUSED,
@@ -366,14 +399,13 @@ local traitMap = {
 	["jewelry_ornate"] = ITEM_TRAIT_TYPE_JEWELRY_ORNATE,
 	["jewelry_prolific"] = ITEM_TRAIT_TYPE_JEWELRY_PROLIFIC,
 	["jewelry_protective"] = ITEM_TRAIT_TYPE_JEWELRY_PROTECTIVE,
+    ["jewelry_quickened"] = ITEM_TRAIT_TYPE_JEWELRY_QUICKENED,
 	["jewelry_robust"] = ITEM_TRAIT_TYPE_JEWELRY_ROBUST,
 	["jewelry_shattering"] = ITEM_TRAIT_TYPE_JEWELRY_SHATTERING,
 	["jewelry_soothing"] = ITEM_TRAIT_TYPE_JEWELRY_SOOTHING,
 	["jewelry_swift"] = ITEM_TRAIT_TYPE_JEWELRY_SWIFT,
 	["jewelry_triune"] = ITEM_TRAIT_TYPE_JEWELRY_TRIUNE,
 	["jewelry_vigorous"] = ITEM_TRAIT_TYPE_JEWELRY_VIGOROUS,
-    ["jewelry_quickened"] = ITEM_TRAIT_TYPE_JEWELRY_QUICKENED,
-    ["jewelry_focused"] = ITEM_TRAIT_TYPE_JEWELRY_FOCUSED,
     ["none"] = ITEM_TRAIT_TYPE_NONE,
 	["weapon_aggressive"] = ITEM_TRAIT_TYPE_WEAPON_AGGRESSIVE,
 	["weapon_augmented"] = ITEM_TRAIT_TYPE_WEAPON_AUGMENTED,
@@ -473,7 +505,7 @@ function AutoCategory.getItemStyles()
 		end
 	end
 	--d(is)
-	table.insert(AutoCategory.dictionary, is)
+	t_insert(AutoCategory.dictionary, is)
 end
 
 AutoCategory.getItemStyles()
@@ -483,13 +515,14 @@ AutoCategory.getItemStyles()
 -- if necessary (and provided)
 -- return true if equal/found
 local function isKnown(arg, typekey, fn, map)
-    if type( arg ) == "number" then
+    local t_arg = type(arg)
+    if t_arg == "number" then
         if arg == typekey then
             return true
         end
         
-    elseif map and type( arg ) == "string" then
-        local val = map[string.lower( arg )]
+    elseif map and t_arg == "string" then
+        local val = map[zo_strlower( arg )]
         if type ( val ) == "table" then
             if val[typekey] then
                 return true
@@ -509,33 +542,21 @@ local function isKnown(arg, typekey, fn, map)
     return false
 end
  
-local L = GetString
+--local L = GetString
 function AutoCategory.RuleFunc.CurrentZone()
-	local fn = "zone"
+	--local fn = "zone"
     return ZO_CachedStrFormat("<<C:1>>", GetZoneNameByIndex(GetCurrentMapZoneIndex()))
 end
 
 function AutoCategory.RuleFunc.isItemId(...)
-	local fn = "isitemid"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
+	--local fn = "isitemid"
 	
-	--local chkId = GetItemLinkItemId(AutoCategory.checkingItemLink)
 	local chkId = GetItemId(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
-	--if chkId ~= itemId then
-	--	error("ZOS error: GetItemId and GetItemLinkItemId are returning different values for the same item.")
-	--end
-	for ax = 1, ac do
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+		if arg then
+            if arg == chkId then return true end
 		end
-		
-        if arg == chkId then return true end
 		
 	end
 	
@@ -543,23 +564,14 @@ function AutoCategory.RuleFunc.isItemId(...)
 end
 
 function AutoCategory.RuleFunc.SpecializedItemType( ... )
-	local fn = "sptype"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
-	
-	for ax = 1, ac do
+	--local fn = "sptype"
+    local _, sptype = GetItemLinkItemType(AutoCategory.checkingItemLink)
+	for _, arg in iter_args(... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+		if arg then
+            local rslt = isKnown(arg, sptype, fn, specializedItemTypeMap)
+            if rslt then return rslt end
 		end
-		
-		local _, sptype = GetItemLinkItemType(AutoCategory.checkingItemLink)
-        local rslt = isKnown(arg, sptype, fn, specializedItemTypeMap)
-        if rslt then return rslt end
 		
 	end
 	
@@ -570,10 +582,10 @@ end
 -- name of item matches one of the specified names
 -- returns true/false
 function AutoCategory.RuleFunc.IsInCurrentZone( ... )
-	local fn = "isinzone"
+	--local fn = "isinzone"
 
-	local itemName = string.lower(GetItemLinkName(AutoCategory.checkingItemLink))
-	local zoneName = string.lower(ZO_CachedStrFormat("<<C:1>>", GetZoneNameByIndex(GetCurrentMapZoneIndex())))
+	local itemName = zo_strlower(GetItemLinkName(AutoCategory.checkingItemLink))
+	local zoneName = zo_strlower(ZO_CachedStrFormat("<<C:1>>", GetZoneNameByIndex(GetCurrentMapZoneIndex())))
 	if( string.find(zoneName,"alik'r") ~= nil ) then
 		-- because maps never say "Alik'r Desert"
 		zoneName = "alik'r"	
@@ -588,21 +600,16 @@ end
 
 function AutoCategory.RuleFunc.ItemType( ... )
 	local fn = "type"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 	
 	local itemType = GetItemLinkItemType(AutoCategory.checkingItemLink)
-	for ax = 1, ac do
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
+		--local arg = select( ax, ... )
 		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+		if arg then
+            local rslt = isKnown(arg, itemType, fn, itemTypeMap)
+            if rslt then return rslt end
 		end
-		local rslt = isKnown(arg, itemType, fn, itemTypeMap)
-        if rslt then return rslt end
 		
 	end
 	
@@ -611,23 +618,17 @@ function AutoCategory.RuleFunc.ItemType( ... )
 end
 
 function AutoCategory.RuleFunc.EquipType( ... )
-	local fn = "equiptype"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
+	--local fn = "equiptype"
 	
-  local _, _, _, _, _, equipType = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+    --local _, _, _, _, _, equipType = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+    local equipType = select(6, GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex))
 
-	for ax = 1, ac do
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+		if arg then
+            local rslt = isKnown(arg, equipType, fn, equipTypeMap)
+            if rslt then return rslt end
 		end
-		local rslt = isKnown(arg, equipType, fn, equipTypeMap)
-        if rslt then return rslt end
 		
 	end
 	
@@ -636,23 +637,17 @@ function AutoCategory.RuleFunc.EquipType( ... )
 end
 
 function AutoCategory.RuleFunc.ItemStyle( ... )
-	local fn = "itemstyle"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
-	
-  local _, _, _, _, _, _, itemstyle = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+	--local fn = "itemstyle"
 
-	for ax = 1, ac do
+    --local _, _, _, _, _, _, itemstyle = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+    local itemstyle = select(7, GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex))
+    local styleName = zo_strlower(GetItemStyleName(itemstyle))
+	for _, arg in iter_args(  ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		if zo_strlower(GetItemStyleName(itemstyle)) == zo_strlower(arg) then
-			return true
+		if arg then
+            if styleName == zo_strlower(arg) then
+                return true
+            end
 		end
 		
 	end
@@ -662,30 +657,29 @@ function AutoCategory.RuleFunc.ItemStyle( ... )
 end
 
 function AutoCategory.RuleFunc.IsLocked( ... )
-	local fn = "islocked"
+	--local fn = "islocked"
 	
 	local isLocked = IsItemPlayerLocked(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 	return isLocked
 end
 
 function AutoCategory.RuleFunc.IsBound( ... )
-	local fn = "isbound"
+	--local fn = "isbound"
 	
-	--local itemLink = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 	local itemLink = AutoCategory.checkingItemLink
 	local isBound = IsItemLinkBound(itemLink)
 	return isBound
 end
 
 function AutoCategory.RuleFunc.IsUnbound( ... )
-	local fn = "isunbound"
+	--local fn = "isunbound"
 	
 	local isBound = IsItemLinkBound(AutoCategory.checkingItemLink)
 	return not isBound
 end
 
 function AutoCategory.RuleFunc.IsCharBound( ... )
-	local fn = "ischarbound"
+	--local fn = "ischarbound"
     
 	local itemLink = AutoCategory.checkingItemLink
     local bindType = GetItemLinkBindType(itemLink)
@@ -697,7 +691,7 @@ function AutoCategory.RuleFunc.IsCharBound( ... )
 end
 
 function AutoCategory.RuleFunc.IsUnknownCollectible( ... )
-	local fn = "isunknowncollectible"
+	--local fn = "isunknowncollectible"
 
 	local collectibleId = GetItemLinkContainerCollectibleId(AutoCategory.checkingItemLink)
 	if collectibleId == 0 then return false end
@@ -705,24 +699,23 @@ function AutoCategory.RuleFunc.IsUnknownCollectible( ... )
 end
 
 function AutoCategory.RuleFunc.IsCollected( ... )
-	local fn = "iscollected"
+	--local fn = "iscollected"
 	
 	local itemLink = AutoCategory.checkingItemLink
 	local itemId = GetItemLinkItemId(itemLink)
-	local hasSet, setName = GetItemLinkSetInfo(itemLink)
+	local hasSet = GetItemLinkSetInfo(itemLink)
 	if hasSet == false then return false end
 	local isCollected = IsItemSetCollectionPieceUnlocked(itemId)
 	return isCollected
 end
 
 function AutoCategory.RuleFunc.IsNotCollected( ... )
-	local fn = "isnotcollected"
+	--local fn = "isnotcollected"
 	
 	local itemLink = AutoCategory.checkingItemLink
 	local itemId = GetItemLinkItemId(itemLink)
-	local hasSet, setName = GetItemLinkSetInfo(itemLink)
+	local hasSet = GetItemLinkSetInfo(itemLink)
 	if hasSet == false then return false end
-    local itemType = GetItemLinkItemType(itemLink)
 	if IsItemLinkCrafted(itemLink) == true then return false end
 	local isCollected = IsItemSetCollectionPieceUnlocked(itemId)
 	if isCollected == false then return true end
@@ -730,17 +723,18 @@ function AutoCategory.RuleFunc.IsNotCollected( ... )
 end
 
 function AutoCategory.RuleFunc.IsStolen( ... )
-	local fn = "isstolen"
+	--local fn = "isstolen"
 	
 	return IsItemStolen(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 end
 
 function AutoCategory.RuleFunc.IsLockpick( ... )
-	local fn = "islockpick"
+	--local fn = "islockpick"
 	
 	local itemType = GetItemLinkItemType(AutoCategory.checkingItemLink)
     if itemType == ITEMTYPE_LOCKPICK or itemType == ITEMTYPE_TOOL then
-        local _, _, _, _, _, _, _, quality = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+        --local _, _, _, _, _, _, _, quality = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+        local quality = select(8, GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex))
         if quality > 1 then return false end
         return true
     end
@@ -748,13 +742,13 @@ function AutoCategory.RuleFunc.IsLockpick( ... )
 end
 
 function AutoCategory.RuleFunc.IsBoPTradeable( ... )
-	local fn = "isboptradeable"
+	--local fn = "isboptradeable"
 	local result = IsItemBoPAndTradeable(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 	return result
 end
 
 function AutoCategory.RuleFunc.IsCompanionOnly( ... )
-	local fn = "iscompaniononly"
+	--local fn = "iscompaniononly"
 
 	local actorCategory = GetItemActorCategory(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 	if actorCategory == GAMEPLAY_ACTOR_CATEGORY_COMPANION then
@@ -764,7 +758,7 @@ function AutoCategory.RuleFunc.IsCompanionOnly( ... )
 end
 
 function AutoCategory.RuleFunc.IsCrafted( ... )
-	local fn = "iscrafted"
+	--local fn = "iscrafted"
 	local itemLink = AutoCategory.checkingItemLink
 	local itemType = GetItemLinkItemType(itemLink)
     if (itemType == ITEMTYPE_POTION or itemType == ITEMTYPE_POISON) then
@@ -775,7 +769,7 @@ function AutoCategory.RuleFunc.IsCrafted( ... )
 end
 
 function AutoCategory.RuleFunc.IsLearnable( ... )
-	local fn = "islearnable"
+	--local fn = "islearnable"
 	
 	local itemLink = AutoCategory.checkingItemLink
 	
@@ -791,52 +785,46 @@ end
 
 function AutoCategory.RuleFunc.Quality( ... )
 	local fn = "quality"  
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 	
-	local _, _, _, _, _, _, _, quality = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+	--local _, _, _, _, _, _, _, quality = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+    local quality = select(8, GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex))
 	local displayquality = GetItemLinkDisplayQuality(AutoCategory.checkingItemLink)
 	
-	for ax = 1, ac do
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		 
-		if type( arg ) == "number" then
-			if arg == quality then
-				return true
-			end
-			
-		elseif type( arg ) == "string" then
+		if arg then
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                if arg == quality then
+                    return true
+                end
+                
+            elseif t_arg == "string" then
 
-			local v = qualityMap[string.lower( arg )]
-			if v and v == displayquality then
-				return true
-			end
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
+                local v = qualityMap[zo_strlower( arg )]
+                if v and v == displayquality then
+                    return true
+                end
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
 		end
-		
 	end
 	
 	return false
 end
 
 function AutoCategory.RuleFunc.GetQuality()
-	local fn = "getquality"
+	--local fn = "getquality"
 	
-	local _, _, _, _, _, _, _, quality = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+	--local _, _, _, _, _, _, _, quality = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+    local quality = select(8, GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex))
 	return quality
 end
 
 function AutoCategory.RuleFunc.IsNew( ... )
-	local fn = "isnew"
+	--local fn = "isnew"
 	if not AutoCategory.checkingItemBagId then
 		return false
 	end
@@ -845,120 +833,97 @@ end
 
 function AutoCategory.RuleFunc.BoundType( ... )
 	local fn = "boundtype"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
+
+    local boundType = GetItemLinkBindType(AutoCategory.checkingItemLink)
+	for _, arg in iter_args( ... ) do
+		
+		if arg then
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                if arg == boundType then
+                    return true
+                end
+                
+            elseif t_arg == "string" then
+                local v = boundTypeMap[zo_strlower( arg )]
+                if v and v == boundType then
+                    return true
+                end
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+		end		
 	end
-	
-	local boundType = GetItemLinkBindType(AutoCategory.checkingItemLink)
-	for ax = 1, ac do
-		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		
-		if type( arg ) == "number" then
-			if arg == boundType then
-				return true
-			end
-			
-		elseif type( arg ) == "string" then
-			local v = boundTypeMap[string.lower( arg )]
-			if v and v == boundType then
-				return true
-			end
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		
-	end
-	
+
 	return false
-	
 end
 
 
 function AutoCategory.RuleFunc.FilterType( ... )
 	local fn = "filtertype"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 
-  local itemFilterType = { GetItemFilterTypeInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex) }
-	for ax = 1, ac do
+    local itemFilterType = { GetItemFilterTypeInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex) }
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		
-		local testFilterType
+		if arg then
+            local testFilterType
+            local t_arg = type(arg)
 
-		if type( arg ) == "number" then
-			testFilterType = arg
-			
-		elseif type( arg ) == "string" then  
-			testFilterType = filterTypeMap[string.lower( arg )]
-			if testFilterType == nil then
-				error( string.format("error: %s(): argument '%s' is not recognized.", fn, string.lower(arg)))
-			end	
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		for i = 1, #itemFilterType do
-			if itemFilterType[i] == testFilterType then
-				return true
-			end
+            if t_arg == "number" then
+                testFilterType = arg
+                
+            elseif t_arg == "string" then  
+                testFilterType = filterTypeMap[zo_strlower( arg )]
+                if testFilterType == nil then
+                    error( string.format("error: %s(): argument '%s' is not recognized.", fn, zo_strlower(arg)))
+                end	
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+            for i = 1, #itemFilterType do
+                if itemFilterType[i] == testFilterType then
+                    return true
+                end
+            end
 		end
 	end
-	
 	return false
 	
 end
 
 function AutoCategory.RuleFunc.Level( ... )
-	local fn = "level"
-	local level = GetItemRequiredLevel(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
-	return level
+	--local fn = "level"
+	return GetItemRequiredLevel(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 end
 
 function AutoCategory.RuleFunc.CPLevel( ... )
-	local fn = "cp"
-	local level = GetItemRequiredChampionPoints(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
-	return level
+	--local fn = "cp"
+	return GetItemRequiredChampionPoints(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 end
 
 function AutoCategory.RuleFunc.CharLevel( ... )
-	local fn = "charlevel"
-	local level = GetUnitLevel("player")
-	return level
+	--local fn = "charlevel"
+	return GetUnitLevel("player")
 end
 
 function AutoCategory.RuleFunc.CharCP( ... )
-	local fn = "charcp"
-	local cp = GetUnitChampionPoints("player")
-	return cp
+	--local fn = "charcp"
+	return GetUnitChampionPoints("player")
 end
 
 
 function AutoCategory.RuleFunc.SellPrice( ... )
-	local fn = "sellprice"
+	--local fn = "sellprice"
 		
 	local _, sellPrice = GetItemLinkInfo(AutoCategory.checkingItemLink)
 	return sellPrice
 end
 
 function AutoCategory.RuleFunc.StackSize( ... )
-	local fn = "stacksize"
-	local stackSize = GetSlotStackSize(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
-	  
-	return stackSize
+	--local fn = "stacksize"
+	return GetSlotStackSize(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
 end
 
 function AutoCategory.RuleFunc.KeepForResearch( ... )
@@ -979,38 +944,31 @@ end
 -- item is part of one of the specified sets (by set name)
 -- returns true/false
 function AutoCategory.RuleFunc.SetName( ... )
-	local fn = "set"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
-	
-	local hasSet, setName = GetItemLinkSetInfo(AutoCategory.checkingItemLink)
+	--local fn = "set"
+
+    local hasSet, setName = GetItemLinkSetInfo(AutoCategory.checkingItemLink)
 	if not hasSet then
 		return false
 	end
-	for ax = 1, ac do
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		
-		local findString
-		if type( arg ) == "number" then
-			findString = tostring(arg)
-			
-		elseif type( arg ) == "string" then
-			findString = arg
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		--fix german language issue
-		setName = string.gsub( setName , "%^.*", "")
-		if string.find(setName, findString, 1 ,true) then
-			return true
+		if arg then
+            local t_arg = type(arg)
+            local findString
+            if t_arg == "number" then
+                findString = tostring(arg)
+                
+            elseif t_arg == "string" then
+                findString = arg
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+            --fix german language issue
+            setName = string.gsub( setName , "%^.*", "")
+            if string.find(setName, findString, 1 ,true) then
+                return true
+            end
 		end
 	end
 	
@@ -1019,7 +977,7 @@ end
 
 
 function AutoCategory.RuleFunc.AutoSetName( ... )
-	local fn = "autoset"
+	--local fn = "autoset"
 
 	local hasSet, setName = GetItemLinkSetInfo(AutoCategory.checkingItemLink)
 	if not hasSet then
@@ -1036,7 +994,7 @@ end
 
 -- combine perfected with equiv non-perfected sets
 function AutoCategory.RuleFunc.CombinedAutoSetName( ... )
-	local fn = "combined_autoset"
+	--local fn = "combined_autoset"
 
 	local hasSet, setName, _, _, _, setId, _  = GetItemLinkSetInfo(AutoCategory.checkingItemLink)
 	if not hasSet then
@@ -1059,14 +1017,14 @@ function AutoCategory.RuleFunc.CombinedAutoSetName( ... )
 end
 
 function AutoCategory.RuleFunc.IsSet( ... )
-	local fn = "isset"
-	local hasSet, setName = GetItemLinkSetInfo(AutoCategory.checkingItemLink)
+	--local fn = "isset"
+	local hasSet = GetItemLinkSetInfo(AutoCategory.checkingItemLink)
 	return hasSet
 end
  
 function AutoCategory.RuleFunc.IsMonsterSet( ... )
-	local fn = "ismonsterset"
-	local hasSet, setName, numBonuses, numEquipped, maxEquipped = GetItemLinkSetInfo(AutoCategory.checkingItemLink)
+	--local fn = "ismonsterset"
+	local hasSet, _, _, _, maxEquipped = GetItemLinkSetInfo(AutoCategory.checkingItemLink)
 	if not hasSet then
 		return false
 	end
@@ -1080,41 +1038,35 @@ end
 -- returns true/false
 function AutoCategory.RuleFunc.TraitType( ... )
 	local fn = "traittype"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 	
 	local traitType, _ = GetItemLinkTraitInfo(AutoCategory.checkingItemLink)
-	for ax = 1, ac do
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+		if arg then
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                if arg == traitType then
+                    return true
+                end
+                
+            elseif t_arg == "string" then
+                local v = traitMap[zo_strlower( arg )]
+                if type(v) == "table" then
+                    if v[traitType] then
+                        return true
+                    end
+                    
+                else
+                    if v and v == traitType then
+                        return true
+                    end
+                end
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
 		end
 		
-		if type( arg ) == "number" then
-			if arg == traitType then
-				return true
-			end
-			
-		elseif type( arg ) == "string" then
-			local v = traitMap[string.lower( arg )]
-			if type(v) == "table" then
-				if v[traitType] then
-					return true
-				end
-				
-			else
-				if v and v == traitType then
-					return true
-				end
-			end
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
 	end
 	
 	return false
@@ -1124,35 +1076,29 @@ end
 -- returns true/false
 function AutoCategory.RuleFunc.ArmorType( ... )
 	local fn = "armortype"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 	
-  local armorType = GetItemArmorType(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
-	for ax = 1, ac do
+    local armorType = GetItemArmorType(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		
-		if type( arg ) == "number" then
-			if arg == armorType then
-				return true
-			end
-			
-		elseif type( arg ) == "string" then 
+		if arg then
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                if arg == armorType then
+                    return true
+                end
+                
+            elseif t_arg == "string" then 
 
-			local v = armorTypeMap[string.lower( arg )]
-			if v and v == armorType then
-				return true
-			end
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
+                local v = armorTypeMap[zo_strlower( arg )]
+                if v and v == armorType then
+                    return true
+                end
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
 		end
+		
 	end
 	
 	return false
@@ -1162,34 +1108,28 @@ end
 -- returns true/false
 function AutoCategory.RuleFunc.WeaponType( ... )
 	local fn = "weapontype"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
-	
-  local weaponType = GetItemWeaponType(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
-	for ax = 1, ac do
+
+    local weaponType = GetItemWeaponType(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+	for _, arg in iter_args(...) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+		if arg then
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                if arg == weaponType then
+                    return true
+                end
+                
+            elseif t_arg == "string" then
+                local v = weaponTypeMap[zo_strlower( arg )]
+                if v and v == weaponType then
+                    return true
+                end
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
 		end
 		
-		if type( arg ) == "number" then
-			if arg == weaponType then
-				return true
-			end
-			
-		elseif type( arg ) == "string" then
-			local v = weaponTypeMap[string.lower( arg )]
-			if v and v == weaponType then
-				return true
-			end
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
 	end
 	
 	return false
@@ -1199,35 +1139,29 @@ end
 -- return true/false
 function AutoCategory.RuleFunc.TraitString( ... )
 	local fn = "traitstring"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 	
 	local traitType, _ = GetItemLinkTraitInfo(AutoCategory.checkingItemLink)
-	local traitText = string.lower(GetString("SI_ITEMTRAITTYPE", traitType))
-	for ax = 1, ac do
+	local traitText = zo_strlower(GetString("SI_ITEMTRAITTYPE", traitType))
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
+		if arg then
 		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+            local findString;
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                findString = tostring(arg)
+                
+            elseif t_arg == "string" then
+                findString = arg
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+            findString = zo_strlower(findString)
+            if string.find(traitText, findString, 1, true) then
+                return true
+            end 
 		end
-		
-		local findString;
-		if type( arg ) == "number" then
-			findString = tostring(arg)
-			
-		elseif type( arg ) == "string" then
-			findString = arg
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		findString = string.lower(findString)
-		if string.find(traitText, findString, 1, true) then
-			return true
-		end 
 	end
 	
 	return false
@@ -1238,44 +1172,49 @@ end
 -- returns true/false
 function AutoCategory.RuleFunc.ItemName( ... )
 	local fn = "itemname"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 	
-	local itemName = string.lower(GetItemLinkName(AutoCategory.checkingItemLink))
+	local itemName = zo_strlower(GetItemLinkName(AutoCategory.checkingItemLink))
    
-	for ax = 1, ac do
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
+		if arg then
 		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		
-		local findString
-		if type( arg ) == "number" then
-			findString = tostring(arg)
-			
-		elseif type( arg ) == "string" then
-			findString = arg
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		--fix german language issue
-		findString = string.gsub(findString , "%^.*", "")
-		findString = string.lower(findString)
-		if string.find(itemName, findString, 1 ,true) then
-			return true
+            local findString
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                findString = tostring(arg)
+                
+            elseif t_arg == "string" then
+                findString = arg
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+            --fix german language issue
+            findString = string.gsub(findString , "%^.*", "")
+            findString = zo_strlower(findString)
+            if string.find(itemName, findString, 1 ,true) then
+                return true
+            end
 		end
 	end
 	
 	return false
 end
 
+function AutoCategory.RuleFunc.IsSurveyReport(...)
+--	local fn = "issurvey"
+	local itemLink = AutoCategory.checkingItemLink
+    local _, sptype = GetItemLinkItemType(itemLink)
+	if sptype == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then return true end
+
+    -- Looking for "Survey Report"
+    local name = GetString(SI_SPECIALIZEDITEMTYPE101)
+    return AutoCategory.RuleFunc.ItemName(name)
+end
+
 function AutoCategory.RuleFunc.IsTag( ... )
-	local fn = "istag"
+	--local fn = "istag"
 	
 	local ac = select( '#', ... )
 	if ac == 0 then
@@ -1296,13 +1235,13 @@ function AutoCategory.RuleFunc.IsTag( ... )
 	-- Build a map of tag category -> table of tags in that category
 	for i = 1, numItemTags do
 		local itemTagDescription, itemTagCategory = GetItemLinkItemTagInfo(itemLink, i)
-		if itemTagCategory == TAG_CATEGORY_TREASURE_TYPE and itemTagDescription ~= "" then
-			table.insert(itemTagStrings, zo_strformat(SI_TOOLTIP_ITEM_TAG_FORMATER, itemTagDescription)) 
+		if itemTagCategory ~= TAG_CATEGORY_NONE and itemTagDescription ~= "" then
+			t_insert(itemTagStrings, zo_strformat(SI_TOOLTIP_ITEM_TAG_FORMATER, itemTagDescription)) 
 		end
 	end
-	for _,idsc in ipairs(itemTagStrings) do
-		for _,desc in ipairs(taglist) do
-			if string.lower(idsc) == string.lower(desc) then return true end
+	for _,idsc in pairs(itemTagStrings) do
+		for _,desc in pairs(taglist) do
+			if zo_strlower(idsc) == zo_strlower(desc) then return true end
 		end
 	end
 	return false
@@ -1310,7 +1249,7 @@ end
 
 -- returns true/false
 function AutoCategory.RuleFunc.IsTreasure( ... )
-	local fn = "istreasure"
+	--local fn = "istreasure"
 	
 	local itemLink = AutoCategory.checkingItemLink
 	
@@ -1324,9 +1263,8 @@ function AutoCategory.RuleFunc.IsTreasure( ... )
 	
 	-- declared as description = treasure
 	local description, itemTag = GetItemLinkItemTagInfo(itemLink, index)
-	local itemName = string.lower(GetItemLinkName(itemLink))
 	if itemTag == TAG_CATEGORY_TREASURE_TYPE then
-		local ldesc = string.lower(description)
+		local ldesc = zo_strlower(description)
 		if string.find(ldesc, "treasure", 1 ,true) then
 			return true
 		end
@@ -1342,47 +1280,42 @@ function AutoCategory.RuleFunc.AlphaGear( ... )
 		return false
 	end
 	local fn = "alphagear"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 	
 	local uid = Id64ToString(GetItemUniqueId(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex))
 	if not uid then return false end
 
-	for ax = 1, ac do 
-		local arg = select( ax, ... )
-		local comIndex = -1
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+	for _, arg in iter_args( ... ) do 
+		local comIndex
+		if arg then
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                comIndex = arg
+                
+            elseif t_arg == "string" then
+                comIndex = tonumber(arg)
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+            
+            local nr = comIndex
+            if AG.setdata[nr].Set.gear > 0 then
+                for slot = 1,14 do
+                    if AG.setdata[AG.setdata[nr].Set.gear].Gear[slot].id == uid then
+                        local setName = AG.setdata[nr].Set.text[1]
+                        AutoCategory.AdditionCategoryName = setName	
+                        return true
+                    end
+                end
+            end 
 		end
-		if type( arg ) == "number" then
-			comIndex = arg
-			
-		elseif type( arg ) == "string" then
-			comIndex = tonumber(arg)
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		
-		local nr = comIndex
-		if AG.setdata[nr].Set.gear > 0 then
-			for slot = 1,14 do
-				if AG.setdata[AG.setdata[nr].Set.gear].Gear[slot].id == uid then
-					local setName = AG.setdata[nr].Set.text[1]
-					AutoCategory.AdditionCategoryName = setName	
-					return true
-				end
-			end
-		end 
 	end
 	
 	return false 
 end
 
 function AutoCategory.RuleFunc.CannotDecon(...)
-	local fn = "cannotdecon"
+	--local fn = "cannotdecon"
 	if AutoCategory.RuleFunc.IsCompanionOnly() then return true end
 	local itemLink = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
     return IsItemLinkForcedNotDeconstructable(itemLink)
@@ -1390,23 +1323,14 @@ end
 
 
 function AutoCategory.RuleFunc.ArmoryBuild( ... )
-	local fn = "armorybuild"
-	local ac = select( '#', ... )
-
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
+	--local fn = "armorybuild"
 
 	-- Retrieving build info for non-equippable items throws an error, so we check equip type first
-	local _, _, _, _, _, equipType, itemStyle = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+	local equipType = select(6, GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex))
 	
-	--local st =zo_strlower(GetItemStyleName(itemstyle))
-	--if st~= nil then
-	--	d(st)
-	--end
 	if (equipType == EQUIP_TYPE_INVALID or equipType == EQUIP_TYPE_POISON) then 
-				return false 
-		end
+        return false 
+    end
 
 	-- Retrieve a list of armory builds this item is part of
 	local armoryBuildListNames = { GetItemArmoryBuildList(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex) }
@@ -1415,8 +1339,7 @@ function AutoCategory.RuleFunc.ArmoryBuild( ... )
 	local numBuilds = #(armoryBuildListNames)
 	if numBuilds == 0 then return false end
 
-	for ax = 1, ac do
-		local arg = select( ax, ... )
+	for _, arg in iter_args( ... ) do
 		for build = 1,numBuilds do
 			local buildName = armoryBuildListNames[build]
 			if arg == buildName then
@@ -1430,23 +1353,25 @@ end
 
 -- returns true/false
 function AutoCategory.RuleFunc.IsEquipping( ... )
-	local fn = "isequipping"
+	--local fn = "isequipping"
 	return AutoCategory.checkingItemBagId == BAG_WORN
 end
 
 -- returns true/false
 function AutoCategory.RuleFunc.IsInBank( ... )
-	return AutoCategory.checkingItemBagId == BAG_BANK or AutoCategory.checkingItemBagId == BAG_SUBSCRIBER_BANK
+    local bagId = AutoCategory.checkingItemBagId
+	return bagId == BAG_BANK or bagId == BAG_SUBSCRIBER_BANK
 end
 
 -- returns true/false
 function AutoCategory.RuleFunc.IsInBackpack( ... )
-	return AutoCategory.checkingItemBagId == BAG_BACKPACK or AutoCategory.checkingItemBagId == BAG_WORN
+    local bagId = AutoCategory.checkingItemBagId
+	return bagId == BAG_BACKPACK or bagId == BAG_WORN
 end
 
 -- returns true/false
 function AutoCategory.RuleFunc.IsInQuickslot( ... )
-	local fn = "isinquickslot"
+	--local fn = "isinquickslot"
 	if AutoCategory.checkingItemBagId ~= BAG_BACKPACK then return false end
 	local actionslot = FindActionSlotMatchingItem(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex,HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
 	if actionslot ~= nil then return true end
@@ -1456,7 +1381,7 @@ end
 -- Addon Integration - TamrielTradeCentre
 -- returns number (price)
 function AutoCategory.RuleFunc.GetPriceTTC( ... )
-	local fn = "ttc_getprice"
+	--local fn = "ttc_getprice"
 	if TamrielTradeCentre then
 		local priceInfo = TamrielTradeCentrePrice:GetPriceInfo(AutoCategory.checkingItemLink)
 		if priceInfo then 
@@ -1498,7 +1423,7 @@ end
 -- Addon Integration - MasterMerchant
 -- returns number (price)
 function AutoCategory.RuleFunc.GetPriceMM( ... )
-	local fn = "mm_getprice"
+	--local fn = "mm_getprice"
 	if MasterMerchant then
 		local mmData = MasterMerchant:itemStats(AutoCategory.checkingItemLink, false)
         if (mmData.avgPrice ~= nil) then
@@ -1511,7 +1436,7 @@ end
 -- Addon Integration - SetTracker
 -- returns true/false
 function AutoCategory.RuleFunc.IsTracked( ... )
-  local fn = "istracked"
+  --local fn = "istracked"
   if SetTrack == nil then
     return false
   end
@@ -1526,7 +1451,7 @@ function AutoCategory.RuleFunc.IsTracked( ... )
     checkSets[arg]=true
   end
   
-  local iTrackIndex, sTrackName, sTrackColour, sTrackNotes = SetTrack.GetTrackingInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+  local iTrackIndex, sTrackName = SetTrack.GetTrackingInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
   if iTrackIndex >= 0 then
     if ac > 0 then
       if checkSets[sTrackName] ~= nil then
@@ -1557,7 +1482,7 @@ end
 -- code donated by Tonyleila
 -- returns ITEM_DISPLAY_QUALITY_*
 function AutoCategory.RuleFunc.GetMaxTraits( ... )
-    local fn = "getmaxtraits"
+    --local fn = "getmaxtraits"
 	local itemLink = AutoCategory.checkingItemLink
     if IsCraftedPotion(itemLink) then
         local quality = ITEM_DISPLAY_QUALITY_NORMAL
@@ -1571,7 +1496,8 @@ function AutoCategory.RuleFunc.GetMaxTraits( ... )
         return quality - 1
 		
     else
-        local _, _, _, _, _, _, _, quality = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+        --local _, _, _, _, _, _, _, quality = GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
+        local quality = select(8, GetItemInfo(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex))
         return quality
     end
 end
@@ -1584,35 +1510,29 @@ function AutoCategory.RuleFunc.CharName(...)
     --   gives you charname@player
     -- GetUnitName("player"))
     --   gives you charname
-    local pn = string.lower(GetUnitName("player"))
-    local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
-	for ax = 1, ac do
+    local pn = zo_strlower(GetUnitName("player"))
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
-		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
+		if arg then
+            local findString
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                findString = tostring(arg)
+                
+            elseif t_arg == "string" then
+                findString = arg
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+            --fix german language issue
+            findString = string.gsub(findString , "%^.*", "")
+            findString = zo_strlower(findString)
+            if string.find(pn, findString, 1 ,true) then
+                return true
+            end
 		end
 		
-		local findString
-		if type( arg ) == "number" then
-			findString = tostring(arg)
-			
-		elseif type( arg ) == "string" then
-			findString = arg
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		--fix german language issue
-		findString = string.gsub(findString , "%^.*", "")
-		findString = string.lower(findString)
-		if string.find(pn, findString, 1 ,true) then
-			return true
-		end
 	end
 	
 	return false
@@ -1622,44 +1542,53 @@ end
 -- returns true/false
 function AutoCategory.RuleFunc.AcctName(...)
     local fn = "acctname" 
-    local pn = string.lower(GetDisplayName())
-    local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
-	for ax = 1, ac do
+    local pn = zo_strlower(GetDisplayName())
+	for _, arg in iter_args( ... ) do
 		
-		local arg = select( ax, ... )
+		if arg then
 		
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		
-		local findString
-		if type( arg ) == "number" then
-			findString = tostring(arg)
-			
-		elseif type( arg ) == "string" then
-			findString = arg
-			
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
-		end
-		if string.find(pn, findString, 1 ,true) then
-			return true
+            local findString
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                findString = tostring(arg)
+                
+            elseif t_arg == "string" then
+                findString = arg
+                
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+            if string.find(pn, findString, 1 ,true) then
+                return true
+            end
 		end
 	end
 	
 	return false
 end
 
--- commented out due to comflict with version of the same function inside AutoCategory_RuleFunc
---
---[[
-function AutoCategory.AddRuleFunc(name, func)
-    AutoCategory.Environment[name] = func
+function AutoCategory.RuleFunc.AutoFurnitureCategory( ... )
+	--local fn = "autofurniturecat"
+
+	local itemType = GetItemLinkItemType(AutoCategory.checkingItemLink)
+	if itemType == ITEMTYPE_FURNISHING then
+        --local itemTypeText = GetString("SI_ITEMTYPE", itemType)
+        local furnitureDataId = GetItemLinkFurnitureDataId(AutoCategory.checkingItemLink)
+        local categoryId, subcategoryId = GetFurnitureDataCategoryInfo(furnitureDataId)
+        local furnitureCategoryText = GetFurnitureCategoryName(categoryId)
+        local furnitureSubcategoryText = GetFurnitureCategoryName(subcategoryId)
+		logDebug("[AutoFurn] category: ", furnitureCategoryText, "  subcategory: ", furnitureSubcategoryText)
+        --if furnitureSubcategoryText == "" then
+        --    furnitureSubcategoryText = nil
+        --end
+		AutoCategory.AdditionCategoryName = furnitureCategoryText
+		return true
+	end
+	return false
 end
---]]
+
+
+
 AutoCategory.Environment = {
 	-- rule functions
 	zone       = AutoCategory.RuleFunc.CurrentZone,
@@ -1739,6 +1668,7 @@ AutoCategory.Environment = {
 	stacksize    = AutoCategory.RuleFunc.StackSize,
 
 	itemname     = AutoCategory.RuleFunc.ItemName,
+    issurvey     = AutoCategory.RuleFunc.IsSurveyReport,
 
     -- Potion/Poison Traits
     getmaxtraits = AutoCategory.RuleFunc.GetMaxTraits,
@@ -1747,23 +1677,9 @@ AutoCategory.Environment = {
 	-- special sort gear into sets functionality
 	autoset      = AutoCategory.RuleFunc.AutoSetName,
 	combined_autoset = AutoCategory.RuleFunc.CombinedAutoSetName,
+	autofurniturecat = AutoCategory.RuleFunc.AutoFurnitureCategory,
     
 	--[[
 	-- see new implementatons in AutoCategory/Misc_Plugins.lua
-	-- -------------------------------------------
-	-- Addon Integrations (old)
-	-- Alpha Gear
-	alphagear    = AutoCategory.RuleFunc.AlphaGear,
-	
-	-- Tamriel Trade Centre
-	getpricettc  = AutoCategory.RuleFunc.GetPriceTTC,
-	ttc_getprice  = AutoCategory.RuleFunc.GetPriceTTC,
-	
-	-- Master Merchant
-	getpricemm   = AutoCategory.RuleFunc.GetPriceMM,
-	mm_getprice   = AutoCategory.RuleFunc.GetPriceMM,
-	
-	-- Set Tracker
-	istracked    = AutoCategory.RuleFunc.IsTracked,
 	--]]
 }

@@ -5,6 +5,8 @@ AutoCategory_UnknownTracker = {
     RuleFunc = {},
 }
 
+local AC_UT = AutoCategory_UnknownTracker
+
 -- language strings
 -- The default language set of strings must contain ALL of the string definitions for the plugin.
 -- For other language sets here, if a string is not defined then the english version is used
@@ -31,7 +33,7 @@ AutoCategory.LoadLanguage(localization_strings,"en")
 
 local L = GetString
 
-AutoCategory_UnknownTracker.predefinedRules = {
+AC_UT.predefinedRules = {
     {
         ["tag"] = "UnknownTracker",
         ["rule"] = "isunknown()",
@@ -71,30 +73,38 @@ AutoCategory_UnknownTracker.predefinedRules = {
 }
 
 -- separated out to allow for offline testing since localization_strings is local
-function AutoCategory_UnknownTracker.LoadLanguage(defaultlang)
+function AC_UT.LoadLanguage(defaultlang)
     if defaultlang == nil then defaultlang = "en" end
     
     -- initialize strings
-    AutoCategory.LoadLanguage(localization_strings,"en")
+    AutoCategory.LoadLanguage(localization_strings,defaultlang)
 end
 
 --Initialize plugin for Auto Category - Unknown Tracker
-function AutoCategory_UnknownTracker.Initialize()
-	if not UnknownTracker then
-        AutoCategory.AddRuleFunc("isunknown", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("isrecipeunknown", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("isfurnishingunknown", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("ismotifunknown", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("isstyleunknown", AutoCategory.dummyRuleFunc)
+function AC_UT.Initialize()
+    -- aliases
+    local AddRuleFunc = AutoCategory.AddRuleFunc
+    local dummyRuleFunc = AutoCategory.dummyRuleFunc
+    local UT_RuleFunc = AC_UT.RuleFunc
+
+    if UnknownTracker and AC_UT.RuleFunc then
+        AutoCat_Logger():Info("Initializing UnknownTracker plugin integration")
+
+        -- load supporting rule functions
+        AddRuleFunc("isunknown", UT_RuleFunc.UT_IsUnknown)
+        AddRuleFunc("isrecipeunknown", UT_RuleFunc.UT_IsRecipeUnknown)
+        AddRuleFunc("isfurnishingunknown", UT_RuleFunc.UT_IsFurnishingUnknown)
+        AddRuleFunc("ismotifunknown", UT_RuleFunc.UT_IsMotifUnknown)
+        AddRuleFunc("isstyleunknown", UT_RuleFunc.UT_IsStyleUnknown)
         return
     end
 
-    -- load supporting rule functions
-    AutoCategory.AddRuleFunc("isunknown", AutoCategory_UnknownTracker.RuleFunc.UT_IsUnknown)
-    AutoCategory.AddRuleFunc("isrecipeunknown", AutoCategory_UnknownTracker.RuleFunc.UT_IsRecipeUnknown)
-    AutoCategory.AddRuleFunc("isfurnishingunknown", AutoCategory_UnknownTracker.RuleFunc.UT_IsFurnishingUnknown)
-    AutoCategory.AddRuleFunc("ismotifunknown", AutoCategory_UnknownTracker.RuleFunc.UT_IsMotifUnknown)
-    AutoCategory.AddRuleFunc("isstyleunknown", AutoCategory_UnknownTracker.RuleFunc.UT_IsStyleUnknown)
+    -- assign dummy rule functions
+    AddRuleFunc("isunknown", dummyRuleFunc)
+    AddRuleFunc("isrecipeunknown", dummyRuleFunc)
+    AddRuleFunc("isfurnishingunknown", dummyRuleFunc)
+    AddRuleFunc("ismotifunknown", dummyRuleFunc)
+    AddRuleFunc("isstyleunknown", dummyRuleFunc)
 end
 
 local valid_itemtypes = {
@@ -107,7 +117,8 @@ local valid_itemtypes = {
 }
 
 local function lookupItem(itemLink, characters)
-	if UnknownTracker == nil then return false end
+    -- checked by all callers
+	--if UnknownTracker == nil then return false end
 	
     -- find out who knows the item
     local isvalid, knownlist = UnknownTracker:IsValidAndWhoKnowsIt(itemLink)
@@ -115,21 +126,22 @@ local function lookupItem(itemLink, characters)
         -- not a real item
         return false 
     end
-    --d("item "..itemLink)
-    --d("characters")
-    --d(characters)
     if not knownlist then 
         -- noone knows it
         return true 
     end
-    --d("knownby")
-    --d(knownlist)
+
     -- find out who doesn't know it
     if not knownlist or not next(knownlist) then
         return true
     end
     local allchars,allacct = UnknownTracker:GetCharacterList()
     local fst = next(knownlist)
+    if not fst then
+        -- noone knows it
+        return true
+    end
+
     local unknowers
     if "@" == string.sub(fst,1,1) then
         --looking for account names
@@ -148,7 +160,7 @@ local function lookupItem(itemLink, characters)
 
     -- check against parameter list of toon names
     -- looking for specific toons that don't know
-    for charname,v in pairs(unknowers) do
+    for charname, _ in pairs(unknowers) do
         if characters[charname] ~= nil then
             -- we were looking for toon that does not know
             return true
@@ -179,10 +191,9 @@ end
 
 -- Implement isunknown() check function for UnknownTracker
 function AutoCategory_UnknownTracker.RuleFunc.UT_IsUnknown( ... )
-	local fn = "isunknown"
+	--local fn = "isunknown"
 	if UnknownTracker == nil then return false end
 
-    local isunknown = false
     local characters = getCharList(...)
 
     -- find out who knows it (if UT display setting is true)
@@ -190,7 +201,7 @@ function AutoCategory_UnknownTracker.RuleFunc.UT_IsUnknown( ... )
     if not itemLink then return false end
 
 	-- it is an item that can be learned
-    local itemType,sptype = GetItemLinkItemType(itemLink)
+    local itemType = GetItemLinkItemType(itemLink)
     local islearnable = false
 	if valid_itemtypes[itemType] == true then
         islearnable = true
@@ -201,10 +212,10 @@ function AutoCategory_UnknownTracker.RuleFunc.UT_IsUnknown( ... )
 end
 
 function AutoCategory_UnknownTracker.RuleFunc.UT_IsRecipeUnknown( ... )
-	local fn = "isrecipeunknown"
+	--local fn = "isrecipeunknown"
 	if UnknownTracker == nil then return false end
 
-    local isunknown = false
+    --local isunknown = false
     -- who is supposed to know it?
     local characters = getCharList(...)
 
@@ -221,10 +232,10 @@ function AutoCategory_UnknownTracker.RuleFunc.UT_IsRecipeUnknown( ... )
 end
 
 function AutoCategory_UnknownTracker.RuleFunc.UT_IsMotifUnknown( ... )
-	local fn = "ismotifunknown"
+	--local fn = "ismotifunknown"
 	if UnknownTracker == nil then return false end
 
-    local isunknown = false
+    --local isunknown = false
     -- who is supposed to know it?
     local characters = getCharList(...)
 
@@ -253,10 +264,10 @@ local valid_furnishingTypes = {
 }
 
 function AutoCategory_UnknownTracker.RuleFunc.UT_IsFurnishingUnknown( ... )
-	local fn = "isfurnishingunknown"
+	--local fn = "isfurnishingunknown"
 	if UnknownTracker == nil then return false end
 	
-    local isunknown = false
+    --local isunknown = false
     -- who is supposed to know it?
     local characters = getCharList(...)
     
@@ -273,17 +284,17 @@ function AutoCategory_UnknownTracker.RuleFunc.UT_IsFurnishingUnknown( ... )
 end
 
 function AutoCategory_UnknownTracker.RuleFunc.UT_IsStyleUnknown( ... )
-	local fn = "isstyleunknown"
+	--local fn = "isstyleunknown"
 	if UnknownTracker == nil then return false end
 	
-    local isunknown = false
+    --local isunknown = false
     -- who is supposed to know it?
     local characters = getCharList(...)
     
     -- are we interested in the item?
     local itemLink = GetItemLink(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
     if not itemLink then return false end
-    local itemType, sptype = GetItemLinkItemType(itemLink)
+    local _, sptype = GetItemLinkItemType(itemLink)
     if sptype ~= SPECIALIZED_ITEMTYPE_COLLECTIBLE_STYLE_PAGE then return false end
 
     -- return true if characters don't know this one
@@ -293,4 +304,4 @@ end
 
 
 -- Register this plugin with AutoCategory to be initialized and used when AutoCategory loads.
-AutoCategory.RegisterPlugin("UnknownTracker", AutoCategory_UnknownTracker.Initialize, AutoCategory_UnknownTracker.predefinedRules)
+AutoCategory.RegisterPlugin("UnknownTracker", AC_UT.Initialize, AC_UT.predefinedRules)

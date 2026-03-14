@@ -2,6 +2,7 @@
 -- multiple sets of localization strings, predefined rules,
 -- two rule functions, and a hook into GearChangerByIakoni as well.
 --
+local iter_args = LibSFUtils.iter_args
 
 AutoCategory_Iakoni = {
     RuleFunc = {},
@@ -223,28 +224,30 @@ function AutoCategory_Iakoni.LoadLanguage(defaultlang)
     if defaultlang == nil then defaultlang = "en" end
 
     -- initialize strings
-    AutoCategory.LoadLanguage(localization_strings,"en")
+    AutoCategory.LoadLanguage(localization_strings,defaultlang)
 end
 
 function AutoCategory_Iakoni.Initialize()
-	if not GearChangerByIakoni then
-        AutoCategory.AddRuleFunc("setindex", AutoCategory.dummyRuleFunc)
-        AutoCategory.AddRuleFunc("inset", AutoCategory.dummyRuleFunc)
+	if GearChangerByIakoni then
+        AutoCat_Logger():Info("Initializing Iakoni Gear Changer plugin integration")
+        -- reinitialize strings
+        AutoCategory.LoadLanguage(localization_strings,"en")
+
+        -- load supporting rule functions
+        AutoCategory.AddRuleFunc("setindex", AutoCategory_Iakoni.RuleFunc.SetIndex)
+        AutoCategory.AddRuleFunc("inset", AutoCategory_Iakoni.RuleFunc.InSet)
+        
+        -- hook into GearChangerByIakoni addon
+        GearChangerByIakoni.DoRefresh = GearChangerByIakoni_DoRefresh
         return
     end
 
-	AutoCategory.logger:Warn("Initializing Iakoni Gear Changer plugin integration")
-    -- reinitialize strings
-    AutoCategory.LoadLanguage(localization_strings,"en")
-
-    -- load supporting rule functions
-    AutoCategory.AddRuleFunc("setindex", AutoCategory_Iakoni.RuleFunc.SetIndex)
-    AutoCategory.AddRuleFunc("inset", AutoCategory_Iakoni.RuleFunc.InSet)
-    
-    -- hook into GearChangerByIakoni addon
-    GearChangerByIakoni.DoRefresh = GearChangerByIakoni_DoRefresh
+    -- assign dummy rule functions
+    AutoCategory.AddRuleFunc("setindex", AutoCategory.dummyRuleFunc)
+    AutoCategory.AddRuleFunc("inset", AutoCategory.dummyRuleFunc)
 end
 
+--[[
 local function IokaniGearChanger_GetGearSet(bagId, slotIndex)
 	local result = {}
 	if GearChangerByIakoni and GearChangerByIakoni.savedVariables then
@@ -268,40 +271,36 @@ local function IokaniGearChanger_GetGearSet(bagId, slotIndex)
 	end
 	return result
 end
+--]]
 
 -- Implement the GearChanger setindex() check function for rules
 function AutoCategory_Iakoni.RuleFunc.SetIndex( ... )
 	if not GearChangerByIakoni then return false end
 
 	local fn = "setindex"
-	local ac = select( '#', ... )
-	if ac == 0 then
-		error( string.format("error: %s(): require arguments." , fn))
-	end
 
 	local setIndices = IakoniGearChanger_GetGearSet(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
-	for ax = 1, ac do
+	for _, arg in iter_args(...) do
 
-		local arg = select( ax, ... )
 		local comIndex = -1
-		if not arg then
-			error( string.format("error: %s():  argument is nil." , fn))
-		end
-		if type( arg ) == "number" then
-			comIndex = arg
+		if arg then
+            local t_arg = type(arg)
+            if t_arg == "number" then
+                comIndex = arg
 
-		elseif type( arg ) == "string" then
-			comIndex = tonumber(arg)
+            elseif t_arg == "string" then
+                comIndex = tonumber(arg)
 
-		else
-			error( string.format("error: %s(): argument is error." , fn ) )
+            else
+                error( string.format("error: %s(): argument is error." , fn ) )
+            end
+            for i=1, #setIndices do
+                local index = setIndices[i]
+                if comIndex == index then
+                    return true
+                end
+            end 
 		end
-		for i=1, #setIndices do
-			local index = setIndices[i]
-			if comIndex == index then
-				return true
-			end
-		end 
 	end
 
 	return false 
@@ -309,7 +308,7 @@ end
 
 -- Implement the GearChanger inset() check function for rules
 function AutoCategory_Iakoni.RuleFunc.InSet( ... )
-	local fn = "inset"
+	--local fn = "inset"
 	if not GearChangerByIakoni then return false end
 
 	local setIndices = IakoniGearChanger_GetGearSet(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)

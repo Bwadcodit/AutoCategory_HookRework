@@ -3,20 +3,24 @@
 --
 -- No strings or predefined rules to load.
 
+local logDebug = AutoCategory.logDebug
+
 AutoCategory_ItemMarker = {
     RuleFunc = {},
 }
 
 --Initialize plugin for Auto Category - Item Marker
 function AutoCategory_ItemMarker.Initialize()
-	if not ItemMarker then
-        AutoCategory.AddRuleFunc("im_ismarked", AutoCategory.dummyRuleFunc)
+    if ItemMarker then
+        AutoCat_Logger():Info("Initializing Item Marker plugin integration")
+        
+        -- load supporting rule functions
+        AutoCategory.AddRuleFunc("im_ismarked", AutoCategory_ItemMarker.RuleFunc.IsMarkedIM)
         return
     end
-    
-    -- load supporting rule functions
-    AutoCategory.AddRuleFunc("im_ismarked", AutoCategory_ItemMarker.RuleFunc.IsMarkedIM)
-    
+
+    -- assign dummy rule functions
+    AutoCategory.AddRuleFunc("im_ismarked", AutoCategory.dummyRuleFunc)
 end
 
 -- Implement im_ismarked() check function for Item Marker
@@ -36,21 +40,19 @@ function AutoCategory_ItemMarker.RuleFunc.IsMarkedIM( ... )
 		checkMarks[arg]=true
 	end
 	
-	local ismarked, markName = ItemMarker_IsItemMarked(AutoCategory.checkingItemBagId,
-										AutoCategory.checkingItemSlotIndex)
+    local checkingItemBagId = AutoCategory.checkingItemBagId
+    local checkingItemSlotIndex = AutoCategory.checkingItemSlotIndex
+	local ismarked, markName = ItemMarker_IsItemMarked(checkingItemBagId,
+										checkingItemSlotIndex)
+    --local name = GetItemName(checkingItemBagId, checkingItemSlotIndex)
 	if ismarked == true then
-		local name = GetItemName(AutoCategory.checkingItemBagId, AutoCategory.checkingItemSlotIndex)
-		--AutoCategory.logger:Debug("im_marked return positive for "..markName.." on "..name.."  ac = "..ac)
 		if ac > 0 then
 			if checkMarks[markName] then
-				--AutoCategory.logger:Debug("In checkMarks")
 				return true
 			end
-			--AutoCategory.logger:Debug("Not in checkMarks")
 			return false
 			
 		else
-			--AutoCategory.logger:Debug("Matched")
 			return true
 		end
 	end
