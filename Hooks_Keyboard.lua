@@ -34,7 +34,8 @@ local function clearNewTweak(scrollData)
 	 -- TWEAK: remove all new flags if stacking all items
 	if stackItemsTweak then
 		stackItemsTweak = false
-		for _, itemEntry in ipairs(scrollData) do
+	    for i = 1, #scrollData do
+	        local itemEntry = scrollData[i]
 			if itemEntry.typeId ~= CATEGORY_HEADER and itemEntry.data.brandNew then
 				itemEntry.data.clearAgeOnClose = nil -- code here comes from inventory.lua:1926
 				SHARED_INVENTORY:ClearNewStatus(itemEntry.data.bagId, itemEntry.data.slotIndex)
@@ -707,9 +708,9 @@ function AutoCategory.HookKeyboardMode()
 
 	-- AlphaGear change detection hook
 	if AG then
-		ZO_PostHook(AG, "handlePostChangeGearSetItems", function() AutoCategory.RefreshCurrentList() end)
+		hookmgr:PostHook(AG, "handlePostChangeGearSetItems", function() AutoCategory.RefreshCurrentList() end)
 
-		ZO_PostHook(AG, "LoadProfile", function()
+		hookmgr:PostHook(AG, "LoadProfile", function()
 			if AutoCategory.agInitSkipped then
 				bulkReloadTweak = true
 				AutoCategory.RefreshCurrentList()
