@@ -352,22 +352,31 @@ local function sortInventoryFn(inven, left, right, key, order)
 end
 
 local function constructEntryHash(itemEntry)
-	local data = itemEntry.data
-	--- Hash construction
-	local bagId = data.bagId
-	local slotIndex = data.slotIndex
-	local hashFCOIS = "" -- retrieve FCOIS mark data for change detection with itemEntry hash
-	if FCOIS and not NilOrLessThan(bagId, 0) and not NilOrLessThan(slotIndex,0) then
-		local _, markedIconsArray = FCOIS.IsMarked(bagId, slotIndex, -1)
-		if markedIconsArray then
-			for _, value in pairs(markedIconsArray) do
-				hashFCOIS = hashFCOIS .. tostring(value)
-			end
-		end
-	end
-	return buildHashString(data.isPlayerLocked, data.isGemmable, data.stolen, data.isBoPTradeable, 
-			data.isInArmory, data.brandNew, data.bagId, data.stackCount, data.uniqueId, data.slotIndex,
-			data.meetsUsageRequirement, data.locked, data.isJunk, hashFCOIS)
+    local data = itemEntry.data
+ 
+    local hashFCOIS = ""
+ 
+    if FCOIS and FCOIS.IsMarked then
+        local bagId = data.bagId
+        local slotIndex = data.slotIndex
+ 
+        if bagId and slotIndex then
+            local _, markedIconsArray = FCOIS.IsMarked(bagId, slotIndex, -1)
+ 
+            if markedIconsArray then
+                local t = {}
+                for i = 1, #markedIconsArray do
+                    t[#t + 1] = tostring(markedIconsArray[i])
+                end
+                hashFCOIS = table.concat(t)
+            end
+        end
+    end
+ 
+    return buildHashString(data.isPlayerLocked, data.isGemmable, data.stolen, data.isBoPTradeable, data.isInArmory,
+        data.brandNew, data.bagId, data.stackCount, data.uniqueId, data.slotIndex, data.meetsUsageRequirement,
+        data.locked, data.isJunk, hashFCOIS
+    )
 end
 
 local function detectItemChanges(itemEntry, newEntryHash, needReload)
@@ -388,13 +397,10 @@ local function detectItemChanges(itemEntry, newEntryHash, needReload)
 	end
 
 	--- Test if uniqueID tagged for update
-	for i, uniqueID in pairs(forceRuleReloadByUniqueIDs) do 
-		-- look for items with changes detected
-		if data.uniqueID == uniqueID then
-			table.remove(forceRuleReloadByUniqueIDs, i)
-			return setChange(true)
-		end
-	end
+    if forceRuleReloadByUniqueIDs[data.uniqueID] then
+        forceRuleReloadByUniqueIDs[data.uniqueID] = nil
+        return setChange(true)
+    end
 
 	--- Update hash and test if changed
 	if data.AC_hash == nil or data.AC_hash ~= newEntryHash then
@@ -427,7 +433,8 @@ local function handleRules(scrollData, needsReload, specialType)
 	-- so need to always reload
 	local reloadAll = needsReload or false 
 
-	for _, itemEntry in pairs(scrollData) do
+    for i = 1, #scrollData do
+        local itemEntry = scrollData[i]
 		if itemEntry.typeId ~= CATEGORY_HEADER then 
 			local newHash = constructEntryHash(itemEntry)
 			if detectItemChanges(itemEntry, newHash, reloadAll) then 
@@ -437,7 +444,6 @@ local function handleRules(scrollData, needsReload, specialType)
 			end
 		end
 	end
-	SF.safeClearTable(forceRuleReloadByUniqueIDs) --- reset update buffer
 	return updateCount
 end
 
@@ -463,7 +469,8 @@ local function createNewScrollData(scrollData)
 	end
 	-- --------------------
 	-- create newScrollData with headers and only non hidden items. No sorting here!
-	for _, itemEntry in pairs(scrollData) do 
+    for i = 1, #scrollData do
+        local itemEntry = scrollData[i]
 		-- add visible non-header rows to the new scrollData table
 		if not isHiddenEntry(itemEntry) then
 			if itemEntry.typeId ~= CATEGORY_HEADER and not isCollapsed(itemEntry) then 
@@ -499,7 +506,7 @@ local function createNewScrollData(scrollData)
 	end
 
 	-- Create headers and append to newScrollData
-	for _, catInfo in pairs(categoryList) do ---> add tracked categories
+	for _, catInfo in pairs(categoryList) do ---> add tracked categories - next() does not offer appreciable performance improvement over pairs()
 		if catInfo.AC_catCount ~= nil then
 			--logDebug("[Keyboard] catinfo: ", ". ", catInfo.AC_sortPriorityName)
 			local headerEntry = createHeaderEntry(catInfo)
@@ -585,18 +592,20 @@ local function prehookCraftSort(self)
 	return false
 end
 
--- prehook parameters, not the event parameters
+-- prehook parameters, not the event parameters - not (eventCode, bagId, slotIndex, isNewItem)
 local function onInventorySlotUpdated(self, bagId, slotIndex)
---local function onInventorySlotUpdated(eventCode, bagId, slotIndex, isNewItem)
 	if not AutoCategory.Enabled then return end
-	--if isNewItem == false then return end
 	if bagId ~= AC_BAG_TYPE_BACKPACK and bagId ~= BAG_BACKPACK then return end
 	
 	-- mark the slot as needing rule re-evaluation
-	table.insert(forceRuleReloadByUniqueIDs, GetItemUniqueId(bagId, slotIndex))
+    local uid = GetItemUniqueId(bagId, slotIndex)
+    if uid then     -- make sure because GetItemUniqueId can return nil
+        forceRuleReloadByUniqueIDs[uid] = true
+    end
 end
 
--- event handler
+-- event handler EVENT_STACKED_ALL_ITEMS_IN_BAG
+-- catch this to do a total refresh of inventory
 local function onStackItems(evtid, bagId)
 	local invType = PLAYER_INVENTORY.bagToInventoryType[bagId]
 	AutoCategory.RefreshList(invType)

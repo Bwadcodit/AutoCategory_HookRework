@@ -1,4 +1,9 @@
-[COLOR="DeepSkyBlue"]4.6.1 (138)[/COLOR]
+[COLOR="DeepSkyBlue"]4.6.2 (142)[/COLOR]
+[LIST]
+[*] Implemented atharti's recommended performance improvements in HookKeyboard.lua.
+[/LIST]
+
+[COLOR="DeepSkyBlue"]4.6.1 (141)[/COLOR]
 [LIST]
 [*] Reenabled integration with the addon GridList.
 [/LIST]
