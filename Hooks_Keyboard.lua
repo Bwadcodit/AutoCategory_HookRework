@@ -37,6 +37,8 @@ local logDebug = AutoCategory.logDebug
 -- uniqueIDs of items that have been updated (need rule re-execution),
 -- based on PLAYER_INVENTORY:OnInventorySlotUpdated hook
 local forceRuleReloadByUniqueIDs = {}
+local pendingUpdates = {}     -- list of waiting to go to forceRuleReloadByUniqueIDs, UID -> timestamp
+
 
 AutoCategory.dataCount = {}
 
@@ -351,25 +353,34 @@ local function sortInventoryFn(inven, left, right, key, order)
 			key, sortKeys, order)
 end
 
+local fcoisAvailable = (FCOIS and FCOIS.IsMarked)
 local function constructEntryHash(itemEntry)
     local data = itemEntry.data
  
+
+    -- Early exit if FCOIS not available - skip the table allocation
+    if not fcoisAvailable then
+        return buildHashString(data.isPlayerLocked, data.isGemmable, data.stolen, 
+            data.isBoPTradeable, data.isInArmory, data.brandNew, data.bagId, 
+            data.stackCount, data.uniqueId, data.slotIndex, data.meetsUsageRequirement,
+            data.locked, data.isJunk)
+    end
+    
+    -- Only check FCOIS if we actually need it (has marks)
     local hashFCOIS = ""
  
-    if FCOIS and FCOIS.IsMarked then
-        local bagId = data.bagId
-        local slotIndex = data.slotIndex
- 
-        if bagId and slotIndex then
-            local _, markedIconsArray = FCOIS.IsMarked(bagId, slotIndex, -1)
- 
-            if markedIconsArray then
-                local t = {}
-                for i = 1, #markedIconsArray do
-                    t[#t + 1] = tostring(markedIconsArray[i])
-                end
-                hashFCOIS = table.concat(t)
+    local bagId = data.bagId
+    local slotIndex = data.slotIndex
+
+    if bagId and slotIndex then
+        local _, markedIconsArray = FCOIS.IsMarked(bagId, slotIndex, -1)
+
+    if markedIconsArray and #markedIconsArray > 0 then
+            local t = {}
+            for i = 1, #markedIconsArray do
+                t[#t + 1] = tostring(markedIconsArray[i])
             end
+            hashFCOIS = table.concat(t)
         end
     end
  
@@ -433,8 +444,7 @@ local function handleRules(scrollData, needsReload, specialType)
 	-- so need to always reload
 	local reloadAll = needsReload or false 
 
-    for i = 1, #scrollData do
-        local itemEntry = scrollData[i]
+	for _, itemEntry in ipairs(scrollData) do
 		if itemEntry.typeId ~= CATEGORY_HEADER then 
 			local newHash = constructEntryHash(itemEntry)
 			if detectItemChanges(itemEntry, newHash, reloadAll) then 
@@ -444,33 +454,36 @@ local function handleRules(scrollData, needsReload, specialType)
 			end
 		end
 	end
+	SF.safeClearTable(forceRuleReloadByUniqueIDs) --- reset update buffer
 	return updateCount
 end
 
+-- The categoryList info is collected and then each entry is passed
+-- to createHeaderEntry() to make a header row
+local cnsd_categoryList = {} -- [name] {AC_catCount, AC_sortPriorityName,
+                        --         AC_categoryName, AC_bagTypeId }
 --- Create list with visible items and headers (performs category count).
 local function createNewScrollData(scrollData)
 	local newScrollData = {} --- output, entries sorted with category headers
 
 	-- --------------------
-	-- The categoryList info is collected and then each entry is passed
+	-- The cnsd_categoryList info is collected and then each entry is passed
 	-- to createHeaderEntry() to make a header row
-	local categoryList = {} -- [name] {AC_catCount, AC_sortPriorityName,
-							--         AC_categoryName, AC_bagTypeId }
+    cnsd_categoryList = SF.safeClearTable(cnsd_categoryList)
 	local safeTable = SF.safeTable
 	
 	local function addCount(name)
-		categoryList[name] = safeTable(categoryList[name])
-		categoryList[name].AC_catCount = SF.nilDefault(categoryList[name].AC_catCount, 0) + 1
+		cnsd_categoryList[name] = safeTable(cnsd_categoryList[name])
+		cnsd_categoryList[name].AC_catCount = SF.nilDefault(cnsd_categoryList[name].AC_catCount, 0) + 1
 	end
 
 	local function setCount(bagTypeId, name, count)
-		categoryList[name] = safeTable(categoryList[name])
-		categoryList[name].AC_catCount = count
+		cnsd_categoryList[name] = safeTable(cnsd_categoryList[name])
+		cnsd_categoryList[name].AC_catCount = count
 	end
 	-- --------------------
 	-- create newScrollData with headers and only non hidden items. No sorting here!
-    for i = 1, #scrollData do
-        local itemEntry = scrollData[i]
+	for _, itemEntry in pairs(scrollData) do 
 		-- add visible non-header rows to the new scrollData table
 		if not isHiddenEntry(itemEntry) then
 			if itemEntry.typeId ~= CATEGORY_HEADER and not isCollapsed(itemEntry) then 
@@ -483,9 +496,9 @@ local function createNewScrollData(scrollData)
 		-- or else create an entry with count = 1
 		local data = itemEntry.data
 		local AC_categoryName = data.AC_categoryName
-		if not categoryList[AC_categoryName] then
+		if not cnsd_categoryList[AC_categoryName] then
 			-- keep track of categories and required data
-			categoryList[AC_categoryName] =  {
+			cnsd_categoryList[AC_categoryName] =  {
 				AC_sortPriorityName = data.AC_sortPriorityName,
 				AC_categoryName = AC_categoryName,
 				AC_bagTypeId = data.AC_bagTypeId,
@@ -506,7 +519,7 @@ local function createNewScrollData(scrollData)
 	end
 
 	-- Create headers and append to newScrollData
-	for _, catInfo in pairs(categoryList) do ---> add tracked categories - next() does not offer appreciable performance improvement over pairs()
+	for _, catInfo in pairs(cnsd_categoryList) do ---> add tracked categories
 		if catInfo.AC_catCount ~= nil then
 			--logDebug("[Keyboard] catinfo: ", ". ", catInfo.AC_sortPriorityName)
 			local headerEntry = createHeaderEntry(catInfo)
@@ -517,6 +530,29 @@ local function createNewScrollData(scrollData)
 		end
 	end
 	return newScrollData
+end
+
+local function rebuildScrollData(zo_inventory)
+	-- add header rows
+	--> rebuild scrollData with headers and visible items
+	local list = zo_inventory.listView 
+	local scrollData = ZO_ScrollList_GetDataList(list)
+
+    if not scrollData or #scrollData == 0 then 
+        if zo_inventory.altFreeSlotType and zo_inventory.altFreeSlotType == INVENTORY_GUILD_BANK then
+            zo_callLater(function()
+                local freshData = ZO_ScrollList_GetDataList(list)
+                if freshData and #freshData > 0 then
+                    rebuildScrollData(zo_inventory)
+                end
+            end, 100)
+        end
+        return false 
+    end
+	if scrollData then
+		handleRules(scrollData, true) -- needsReload) --> update rules' results if necessary
+		list.data = createNewScrollData(scrollData) --, zo_inventory.sortFn) 
+	end
 end
 
 -- prehook
@@ -557,16 +593,8 @@ local function prehookSort(self, inventoryType)
 		needsReload = false
 	end
 
+    rebuildScrollData(zo_inventory)
 
-	-- add header rows
-	--> rebuild scrollData with headers and visible items
-	local list = zo_inventory.listView 
-	local scrollData = ZO_ScrollList_GetDataList(list)
-
-	if scrollData then
-		handleRules(scrollData, needsReload) --> update rules' results if necessary
-		list.data = createNewScrollData(scrollData) --, zo_inventory.sortFn) 
-	end
 	return false
 end
 
@@ -592,20 +620,60 @@ local function prehookCraftSort(self)
 	return false
 end
 
--- prehook parameters, not the event parameters - not (eventCode, bagId, slotIndex, isNewItem)
+local updateCounter = 0
+local CLEANUP_THRESHOLD = 50
+local callLater         -- the calllater object for controlling single-shot start/stop/destroy
+
+-- clear out pending entries that are older than 15 seconds - they are hung
+local function cleanupPendingUpdates()
+    updateCounter = updateCounter + 1
+    if updateCounter < CLEANUP_THRESHOLD then return end
+    
+    updateCounter = 0
+
+    -- Clean old entries from pendingUpdates
+    local currentTime = os.clock()
+    local cleaned = 0
+    for uid, timestamp in pairs(pendingUpdates) do
+        -- If entry is older than 15 seconds, remove it
+        if currentTime - timestamp > 15 then
+            pendingUpdates[uid] = nil
+            cleaned = cleaned + 1
+        end
+    end
+    --[[
+    if cleaned > 0 then
+        -- Optional: log for debugging
+        logDebug("[Keyboard] Cleaned " .. cleaned .. " stale rule reload entries")
+    end
+    --]]
+end
+
+
+local function updateHook(zo_inventory)
+    for uid in pairs(pendingUpdates) do
+        forceRuleReloadByUniqueIDs[uid] = true
+        pendingUpdates[uid] = nil
+    end
+    pendingUpdates = SF.safeClearTable(pendingUpdates)
+
+    rebuildScrollData(zo_inventory)
+
+end
+
+
+-- prehook parameters, not the event parameters
 local function onInventorySlotUpdated(self, bagId, slotIndex)
 	if not AutoCategory.Enabled then return end
 	if bagId ~= AC_BAG_TYPE_BACKPACK and bagId ~= BAG_BACKPACK then return end
 	
-	-- mark the slot as needing rule re-evaluation
     local uid = GetItemUniqueId(bagId, slotIndex)
-    if uid then     -- make sure because GetItemUniqueId can return nil
-        forceRuleReloadByUniqueIDs[uid] = true
+    if uid then
+        pendingUpdates[uid] = os.clock()
     end
 end
 
--- event handler EVENT_STACKED_ALL_ITEMS_IN_BAG
--- catch this to do a total refresh of inventory
+-- event handler
 local function onStackItems(evtid, bagId)
 	local invType = PLAYER_INVENTORY.bagToInventoryType[bagId]
 	AutoCategory.RefreshList(invType)
@@ -617,13 +685,13 @@ function AutoCategory.HookKeyboardMode()
 	local rowHeight = AutoCategory.acctSaved.appearance["CATEGORY_HEADER_HEIGHT"]
     local hookmgr = AutoCategory.hookmgr
 
-    AddTypeToList(rowHeight, ZO_PlayerInventoryList,  	   INVENTORY_BACKPACK)
+    AddTypeToList(rowHeight, ZO_PlayerInventoryList,  	INVENTORY_BACKPACK)
     AddTypeToList(rowHeight, ZO_CraftBagList,             INVENTORY_BACKPACK)
     AddTypeToList(rowHeight, ZO_PlayerBankBackpack,       INVENTORY_BACKPACK)
     AddTypeToList(rowHeight, ZO_GuildBankBackpack,        INVENTORY_BACKPACK)
     AddTypeToList(rowHeight, ZO_HouseBankBackpack,        INVENTORY_BACKPACK)
     AddTypeToList(rowHeight, ZO_PlayerInventoryQuest,     INVENTORY_QUEST_ITEM)
-    AddTypeToList(rowHeight, ZO_FurnitureVaultList,     INVENTORY_BACKPACK)
+    AddTypeToList(rowHeight, ZO_FurnitureVaultList,       INVENTORY_BACKPACK)
 
     AddTypeToList(rowHeight, SMITHING.deconstructionPanel.inventory.list, nil)
     AddTypeToList(rowHeight, SMITHING.improvementPanel.inventory.list,    nil)
@@ -642,6 +710,9 @@ function AutoCategory.HookKeyboardMode()
 	-- user can force a refresh with stack key
 	AutoCategory.evtmgr:registerEvt(EVENT_STACKED_ALL_ITEMS_IN_BAG, onStackItems)
 
+    pendingUpdates = SF.safeClearTable(pendingUpdates)
+    callLater = SF.CallLater:NewSingle(updateHook, 50)
+
 end
 
 function AutoCategory.UnHookKeyboardMode()
@@ -649,6 +720,12 @@ function AutoCategory.UnHookKeyboardMode()
 	-- user can force a refresh with stack key
 	AutoCategory.evtmgr:unregEvt(EVENT_STACKED_ALL_ITEMS_IN_BAG, onStackItems)
 	AutoCategory.hookmgr:disableAll()
+
+    -- Clear pending updates
+    pendingUpdates = SF.safeClearTable(pendingUpdates)
+    if callLater then
+        callLater = callLater:Destroy()
+    end
 end
 
 --[[

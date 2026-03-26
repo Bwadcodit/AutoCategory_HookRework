@@ -5,6 +5,7 @@ AC_BAG_TYPE_CRAFTBAG = 4
 AC_BAG_TYPE_CRAFTSTATION = 5
 AC_BAG_TYPE_HOUSEBANK = 6
 AC_BAG_TYPE_FURNVAULT = 7
+AC_BAG_TYPE_VENGEANCE = 8
 AC_BAG_TYPE_MIN =  AC_BAG_TYPE_BACKPACK
 AC_BAG_TYPE_MAX = AC_BAG_TYPE_FURNVAULT
 
@@ -12,7 +13,7 @@ local SF = LibSFUtils
  
 AutoCategory = {
     name = "AutoCategory",
-    version = SF.colors.gold:Colorize("4.6.2"),
+    version = SF.colors.gold:Colorize("4.6.4"),
     settingName = "AutoCategory",
     settingDisplayName = SF.colors.gold("AutoCategory - Revised"),
     author = SF.colors.purple("Shadowfen, crafty35, RockingDice, Friday_the13_rus"),
@@ -25,6 +26,7 @@ AutoCategory = {
     compiledRules = {},
     rules = {},	--  [#] rule {rkey, name, tag, description, rule, pred, damaged, err}
     ARW = {},
+    BulkMode = false,
 }
 
 AutoCat_Logger = SF.SafeLoggerFunction(AutoCategory, "logger", "AutoCategory")
@@ -34,7 +36,7 @@ AutoCat_Logger = SF.SafeLoggerFunction(AutoCategory, "logger", "AutoCategory")
     addon operation. Turning it on does however provide lots and lots of debug logging.
     Never leave this uncommented when releasing!!
 --]]
---AutoCat_Logger():SetDebug(true)
+AutoCat_Logger():SetDebug(true)
 
 -- convenience function for a call to AutoCat_Logger():Debug(SF.str(...))
 -- only done for Debug() because there is no special handling for the other message levels
